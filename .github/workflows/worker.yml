@@ -8,9 +8,11 @@ name: Worker de importação
 #   Secret   DATABASE_URL      conexão "Session pooler" do Supabase (porta 5432)
 #   Variable LEAD_WINDOW_DAYS  opcional (padrão 7; plano gratuito do Supabase tem 500 MB)
 
+# CÓPIA DE TRABALHO (js-lead-hunter-3): o agendamento automático está DESLIGADO aqui,
+# para não haver um segundo worker gravando no banco de produção.
+# Só roda manualmente e se a variável PERMITIR_WORKER=sim existir neste repositório.
+# NUNCA cadastre aqui o DATABASE_URL de produção: use o banco de homologação.
 on:
-  schedule:
-    - cron: "17 * * * *"
   workflow_dispatch:
 
 concurrency:
@@ -19,6 +21,7 @@ concurrency:
 
 jobs:
   worker:
+    if: vars.PERMITIR_WORKER == 'sim'
     runs-on: ubuntu-24.04
     timeout-minutes: 340
     env:

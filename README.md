@@ -1,5 +1,10 @@
 # JS Lead Hunter
 
+> **Cópia de trabalho do JS Lead Hunter 3.0.** O sistema em produção continua no repositório
+> original [`js-lead-hunter`](https://github.com/jsagencia04-coder/js-lead-hunter). Aqui os
+> agendamentos do GitHub Actions estão desligados e só rodam manualmente com a variável
+> `PERMITIR_WORKER=sim`. Use apenas o banco de **homologação**; nunca cadastre o `DATABASE_URL` de produção.
+
 Plataforma de inteligência comercial da **JS Designer**. Ela encontra empresas brasileiras recém-abertas e com situação cadastral **ATIVA** na base pública do CNPJ da Receita Federal e as transforma em leads pontuados, com recomendação de serviços e um CRM para acompanhar a prospecção.
 
 > A base pública do CNPJ é atualizada **por competência** (mensalmente), não em tempo real. O sistema mostra sempre a competência vigente e a data de referência dos dados. Situação cadastral ativa **não** comprova regularidade fiscal.

@@ -13,9 +13,11 @@ name: Inteligência digital
 #
 # ATENÇÃO: em repositório público os logs do Actions são públicos. O motor registra só totais.
 
+# CÓPIA DE TRABALHO (js-lead-hunter-3): o agendamento automático está DESLIGADO aqui,
+# para não haver um segundo worker gravando no banco de produção.
+# Só roda manualmente e se a variável PERMITIR_WORKER=sim existir neste repositório.
+# NUNCA cadastre aqui o DATABASE_URL de produção: use o banco de homologação.
 on:
-  schedule:
-    - cron: "41 */3 * * *"
   workflow_dispatch:
 
 concurrency:
@@ -24,6 +26,7 @@ concurrency:
 
 jobs:
   intel:
+    if: vars.PERMITIR_WORKER == 'sim'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     env:
