@@ -38,12 +38,12 @@ worker até 2 vCPU / ~4 GB. Os outros 2 sistemas usam hoje ~2,5 GB e 8% de CPU.
 4. **Pastas e código:**
    ```bash
    sudo mkdir -p /srv/js-lead-hunter && cd /srv/js-lead-hunter
-   sudo git clone -b migracao-vps https://github.com/jsagencia04-coder/js-lead-hunter app
+   sudo git clone -b migracao-vps https://github.com/jsagencia04-coder/js-lead-hunter-3 app
    sudo cp app/deploy/vps/migracao.env.example migracao.env
    sudo chmod 600 migracao.env
    sudo nano migracao.env        # preencha CLOUD_DATABASE_URL, domínios e SMTP
    ```
-   Se o repositório ficar privado, use uma *deploy key* do GitHub (somente leitura) para o clone.
+   Este clone usa a cópia de trabalho `js-lead-hunter-3`. Se ela ficar privada, use uma *deploy key* do GitHub (somente leitura).
 
 ## 1. Instalar o Supabase auto-hospedado
 
