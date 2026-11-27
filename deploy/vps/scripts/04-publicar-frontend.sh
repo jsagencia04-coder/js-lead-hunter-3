@@ -18,6 +18,9 @@ docker run --rm -v "$APP_DIR/web:/web" -w /web \
   node:22-alpine sh -c "npm ci --no-audit --no-fund && npm run build"
 
 cp -a "$APP_DIR/web/dist/." "$REL/"
+chmod -R a+rX "$REL"
 ln -sfn "$REL" "$BASE_DIR/www"
-log "Publicado em $REL (link $BASE_DIR/www). Versões anteriores ficam em $BASE_DIR/www-versoes/."
+# Link relativo usado pelo container jslh-web (que só enxerga a pasta www-versoes)
+ln -sfn "$(basename "$REL")" "$BASE_DIR/www-versoes/atual"
+log "Publicado em $REL (links $BASE_DIR/www e www-versoes/atual). Para voltar: ln -sfn <versão anterior> $BASE_DIR/www-versoes/atual"
 log "A chave publicada é a ANON (pública). A SERVICE_ROLE nunca vai para o frontend."
