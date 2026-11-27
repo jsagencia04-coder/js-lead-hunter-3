@@ -89,8 +89,11 @@ export default function Opportunities() {
   const [saved, setSaved] = useState<{ id: string; name: string; filters: F }[]>([])
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [campaigns, setCampaigns] = useState<{id:string;name:string}[]>([])
+  const [campaign, setCampaign] = useState('')
 
   useEffect(() => {
+    supabase.from('sales_campaigns').select('id,name').neq('status','concluida').order('name').limit(100).then(({data})=>setCampaigns(data??[]))
     supabase.from('service_catalog').select('code,name').eq('active', true).order('sort_order').then(({ data }) => setServices(data ?? []))
     supabase.from('profiles').select('id,full_name,email,role').eq('active', true).order('full_name').then(({ data }) => setOwners(data ?? []))
   }, [])
@@ -223,6 +226,7 @@ export default function Opportunities() {
           <div className="flex flex-wrap items-center justify-between gap-2 p-4">
             <p className="text-sm text-muted-foreground">{loading ? 'Carregando…' : `${nf.format(count)} empresa(s)`}{sel.size > 0 && ` · ${sel.size} selecionada(s)`}</p>
             <div className="flex flex-wrap items-center gap-2">
+              {canEdit && campaigns.length>0 && <><Select aria-label="Campanha de destino" className="w-44" value={campaign} onChange={e=>setCampaign(e.target.value)}><option value="">Escolher campanha</option>{campaigns.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</Select><Button size="sm" variant="outline" disabled={!sel.size||!campaign} onClick={async()=>{setError(null);const r=await supabase.rpc('add_campaign_members',{p_id:campaign,p_lead_ids:[...sel]});if(r.error)setError(r.error.message);else{setNotice(`${r.data} empresas adicionadas à campanha; duplicadas/bloqueadas ignoradas.`);setSel(new Set())}}}>Incluir na campanha</Button></>}
               {canEdit && <Button size="sm" disabled={!sel.size} onClick={addToPipeline}><KanbanSquare className="h-4 w-4" /> Adicionar ao CRM</Button>}
               {canEdit && <Button size="sm" variant="outline" disabled={!sel.size} onClick={research}><Search className="h-4 w-4" /> Pesquisar de novo</Button>}
               {canDistribute && (

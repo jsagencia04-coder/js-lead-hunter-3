@@ -42,6 +42,15 @@ services:
       migrate:
         condition: service_completed_successfully
 
+  operations:
+    <<: *base
+    command: ["operations"]
+    mem_limit: 256m
+    cpus: 0.25
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
   manutencao:
     <<: *base
     entrypoint: ["sh", "-c", "while true; do python -m lead_hunter maintenance; sleep 86400; done"]

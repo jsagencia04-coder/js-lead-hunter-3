@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label'
 import { Alert } from '@/components/ui/alert'
 import { TabList, TabPanel, type TabDef } from '@/components/ui/tabs'
 import { BusinessDigitalTwin } from '@/components/BusinessDigitalTwin'
+import { CompanyMonitoring } from '@/components/CompanyMonitoring'
 import { ApproachSection, ProposalsSection, type Diagnosis } from '@/components/LeadCommercial'
 import { AssistantSection, ChannelsSection, ContractsSection, OpportunitiesSection, TagsSection, TasksSection, type Assistant } from '@/components/LeadCrm'
 
@@ -68,6 +69,7 @@ const SITUACAO: Record<string, string> = { '01': 'Nula', '02': 'Ativa', '03': 'S
 const TABS: TabDef[] = [
   { id: 'visao', label: 'Visão geral', icon: Building2 },
   { id: 'twin', label: 'Digital Twin', icon: Building2 },
+  { id: 'monitoramento', label: 'Radar e comparáveis', icon: Radar },
   { id: 'digital', label: 'DNA Digital', icon: Radar },
   { id: 'crm', label: 'CRM e tarefas', icon: KanbanSquare },
   { id: 'propostas', label: 'Propostas', icon: FileText },
@@ -265,6 +267,8 @@ export function LeadDrawer({ leadId, onClose, onChanged }: { leadId: string | nu
               <TabPanel active={tab} id="twin">
                 <BusinessDigitalTwin leadId={leadId} />
               </TabPanel>
+
+              <TabPanel active={tab} id="monitoramento">{tab==='monitoramento'&&<CompanyMonitoring key={leadId} leadId={leadId} />}</TabPanel>
 
               <TabPanel active={tab} id="digital">
                 <Section title="Presença digital">

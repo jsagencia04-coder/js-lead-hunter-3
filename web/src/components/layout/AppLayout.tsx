@@ -11,6 +11,7 @@ import { supabase } from '@/lib/supabase'
 import { LeadDrawerContext } from '@/lib/crm'
 import { LeadDrawer } from '@/components/LeadDrawer'
 import { Button } from '@/components/ui/button'
+import { ThemeToggle } from '@/components/ThemeToggle'
 
 interface NavItem {
   to: string
@@ -36,7 +37,9 @@ const NAV_GROUPS: NavGroup[] = [
       { to: '/', label: 'Visão geral', icon: LayoutDashboard },
       { to: '/leads', label: 'Base de empresas', icon: Building2 },
       { to: '/mapa', label: 'Mapa de oportunidades', icon: Map },
+      { to: '/mercado', label: 'Inteligência territorial', icon: BarChart3 },
       { to: '/inteligencia', label: 'Inteligência digital', icon: Radar },
+      { to: '/radar', label: 'Radar empresarial', icon: Radar },
       { to: '/oportunidades', label: 'Central de oportunidades', icon: Target },
     ],
   },
@@ -47,16 +50,25 @@ const NAV_GROUPS: NavGroup[] = [
       { to: '/minha-operacao', label: 'Minha operação', icon: Crosshair },
       { to: '/crm', label: 'CRM comercial', icon: KanbanSquare },
       { to: '/agenda', label: 'Agenda e tarefas', icon: CalendarCheck, badge: 'agenda' },
+      { to: '/campanhas', label: 'Campanhas', icon: Target },
       { to: '/propostas', label: 'Propostas', icon: FileText },
       { to: '/clientes', label: 'Clientes', icon: Handshake },
       { to: '/servicos', label: 'Serviços', icon: Package },
     ],
   },
   {
+    id: 'ia',
+    label: 'Inteligência assistida',
+    items: [{ to: '/assistente', label: 'Assistente comercial', icon: Search }, { to: '/agentes', label: 'Central de agentes', icon: Target }],
+  },
+  {
     id: 'gestao',
     label: 'Gestão',
     items: [
       { to: '/relatorios', label: 'Relatórios', icon: BarChart3 },
+      { to: '/receita', label: 'Inteligência de receita', icon: BarChart3 },
+      { to: '/segmentos', label: 'Segmentos e ICP', icon: Target },
+      { to: '/automacoes', label: 'Automações e alertas', icon: CalendarCheck },
       { to: '/importacao', label: 'Central de importação', icon: DatabaseZap, roles: ['admin', 'gestor'] },
       { to: '/admin', label: 'Administração', icon: ShieldCheck, roles: ['admin'] },
     ],
@@ -239,6 +251,7 @@ export function AppLayout() {
             <div className="ml-auto flex w-full justify-end lg:ml-0 lg:justify-start">
               <GlobalSearch onOpen={openLead} />
             </div>
+            <ThemeToggle />
           </header>
           <main className="flex-1 p-4 md:p-8">
             <Outlet />

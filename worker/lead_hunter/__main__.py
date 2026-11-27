@@ -62,6 +62,8 @@ def main(argv: list[str] | None = None) -> int:
     it.add_argument("--minutos", type=int, default=40, help="tempo máximo da rodada (padrão 40)")
     it.add_argument("--max", type=int, default=None, help="máximo de empresas nesta rodada")
     sub.add_parser("maintenance", help="manutenção: arquivamento (se ligado) e inventário")
+    op = sub.add_parser("operations", help="automações internas e watchlists persistentes")
+    op.add_argument("--once", action="store_true", help="executa uma única rodada")
     bk = sub.add_parser("backup", help="backup verificável do banco")
     bk.add_argument("folder", nargs="?", help="pasta de destino (padrão: ./backups)")
     bv = sub.add_parser("backup-verify", help="confere um backup")
@@ -117,6 +119,17 @@ def main(argv: list[str] | None = None) -> int:
         stats = eng.run(deadline=time.monotonic() + args.minutos * 60, max_items=args.max)
         print("Inteligência digital: " + json.dumps(stats, ensure_ascii=False))
         return 0 if stats.get("situacao") != "falhou" else 2
+
+    if args.cmd == "operations":
+        from .operations import run_operations, serve_operations
+        import json
+        settings = Settings.from_env()
+        if args.once:
+            result = run_operations(settings.database_url)
+            print(json.dumps(result, ensure_ascii=False))
+            return 2 if result.get('status') == 'falhou' else 0
+        serve_operations(settings.database_url)
+        return 0
 
     if args.cmd == "migrate":
         from .migrate import migrate

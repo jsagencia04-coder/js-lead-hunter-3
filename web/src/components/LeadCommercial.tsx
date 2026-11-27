@@ -2,6 +2,7 @@
 // Toda mensagem é enviada manualmente pelo usuário, uma a uma (sem disparo em massa).
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Copy, FileText, Lightbulb, Mail, MessageCircle, Send } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { brl, formatDate, formatDateTime } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -73,6 +74,9 @@ export function ProposalsSection({ leadId, opportunityId, canEdit, userId, onCha
   const [status, setStatus] = useState('enviada')
   const [validUntil, setValidUntil] = useState('')
   const [notes, setNotes] = useState('')
+  const [scope, setScope] = useState('')
+  const [paymentTerms, setPaymentTerms] = useState('')
+  const [deliveryTerms, setDeliveryTerms] = useState('')
 
   const load = useCallback(async () => {
     const { data, error } = await supabase.from('lead_proposals').select('*').eq('lead_id', leadId).order('created_at', { ascending: false })
@@ -89,11 +93,12 @@ export function ProposalsSection({ leadId, opportunityId, canEdit, userId, onCha
     setBusy(true); setError(null)
     const { error } = await supabase.from('lead_proposals').insert({
       lead_id: leadId, opportunity_id: opportunityId ?? null, title: title.trim(), amount: value, status, valid_until: validUntil || null,
-      notes: notes.trim() || null, created_by: userId,
+      notes: notes.trim() || null, scope: scope.trim() || null,
+      payment_terms: paymentTerms.trim() || null, delivery_terms: deliveryTerms.trim() || null, created_by: userId,
     })
     setBusy(false)
     if (error) { setError(error.message); return }
-    setTitle(''); setAmount(''); setNotes(''); setValidUntil('')
+    setTitle(''); setAmount(''); setNotes(''); setValidUntil(''); setScope(''); setPaymentTerms(''); setDeliveryTerms('')
     await load(); onChanged()
   }
 
@@ -120,6 +125,7 @@ export function ProposalsSection({ leadId, opportunityId, canEdit, userId, onCha
               {p.decided_at && ` · decidida em ${formatDateTime(p.decided_at)}`}
             </p>
             {p.notes && <p className="mt-1 whitespace-pre-wrap text-xs">{p.notes}</p>}
+            <Link className="mt-2 inline-block text-xs text-primary underline" to={`/propostas/${p.id}/documento`} target="_blank" rel="noopener">Abrir documento / PDF</Link>
           </div>
           {canEdit ? (
             <Select value={p.status} disabled={busy} onChange={(e) => changeStatus(p.id, e.target.value)} className="w-40" aria-label="Situação da proposta">
@@ -142,6 +148,9 @@ export function ProposalsSection({ leadId, opportunityId, canEdit, userId, onCha
             <Input type="date" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} /></div>
           <div className="space-y-1"><Label>Observações</Label>
             <Input value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
+          <label className="md:col-span-2 text-xs text-muted-foreground">Escopo<textarea className="mt-1 w-full rounded border bg-background p-2 text-sm" value={scope} onChange={e=>setScope(e.target.value)} rows={3}/></label>
+          <label className="text-xs text-muted-foreground">Condições de pagamento<Input value={paymentTerms} onChange={e=>setPaymentTerms(e.target.value)}/></label>
+          <label className="text-xs text-muted-foreground">Prazo de entrega<Input value={deliveryTerms} onChange={e=>setDeliveryTerms(e.target.value)}/></label>
           <div className="md:col-span-2">
             <Button type="submit" disabled={busy || !title.trim()}><FileText className="h-4 w-4" /> Registrar proposta</Button>
           </div>

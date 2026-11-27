@@ -22,6 +22,10 @@ docker run --rm -v "$APP_DIR/web:/web" -w /web \
   node:22-alpine sh -c "npm ci --no-audit --no-fund && npm test && npm run build"
 
 cp -a "$APP_DIR/web/dist/." "$REL/"
+# Preserva chunks já referenciados por abas abertas antes da atualização (rotas lazy).
+if [[ -d "$BASE_DIR/www-versoes/atual/assets" ]]; then
+  cp -an "$BASE_DIR/www-versoes/atual/assets/." "$REL/assets/"
+fi
 printf '{"commit":"%s","publicado_em":"%s"}\n' "$COMMIT" "$(date -u +%FT%TZ)" > "$REL/release.json"
 chmod -R a+rX "$REL"
 # rename(2) no mesmo filesystem: o link antigo permanece até a troca completa.

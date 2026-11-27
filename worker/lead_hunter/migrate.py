@@ -33,6 +33,11 @@ MARKERS = {
     "20261126000015": "select to_regclass('public.scoring_versions') is not null",
     "20261127000016": "select to_regprocedure('public.my_operation_summary()') is not null",
     "20261127000017": "select to_regprocedure('public.company_digital_twin(uuid)') is not null",
+    "20261127000018": "select to_regprocedure('public.run_sales_automations(integer)') is not null",
+    "20261127000019": "select to_regprocedure('public.proposal_document(uuid)') is not null",
+    "20261127000020": "select to_regprocedure('public.run_operational_agent_job()') is not null",
+    "20261127000021": "select to_regprocedure('public.sales_copilot_query(text)') is not null",
+    "20261127000022": "select to_regprocedure('public.revenue_summary(date,date)') is not null",
 }
 
 

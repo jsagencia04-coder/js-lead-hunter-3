@@ -25,6 +25,24 @@
     --sidebar-foreground: 220 14% 85%;
     --radius: 0.6rem;
   }
+  .dark {
+    color-scheme: dark;
+    --background: 222 35% 9%;
+    --foreground: 215 25% 92%;
+    --card: 222 30% 12%;
+    --card-foreground: 215 25% 92%;
+    --primary: 217 92% 68%;
+    --primary-foreground: 222 47% 11%;
+    --secondary: 222 22% 19%;
+    --secondary-foreground: 215 25% 92%;
+    --muted: 222 22% 19%;
+    --muted-foreground: 215 16% 70%;
+    --accent: 220 30% 20%;
+    --accent-foreground: 215 80% 82%;
+    --border: 220 20% 26%;
+    --input: 220 20% 30%;
+    --ring: 217 92% 68%;
+  }
   * { @apply border-border; }
   body { @apply bg-background text-foreground antialiased; }
 }

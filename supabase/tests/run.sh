@@ -11,4 +11,8 @@ for f in "$DIR"/../migrations/*.sql; do $P -f "$f"; done
 $P -f "$DIR/01_behaviour.sql"
 $P -f "$DIR/02_my_operation.sql"
 $P -f "$DIR/03_business_digital_twin.sql"
+$P -f "$DIR/04_radar_automation.sql"
+$P -f "$DIR/05_campaigns_documents.sql"
+$P -f "$DIR/06_market_copilot.sql"
+$P -f "$DIR/07_revenue_segments.sql"
 echo "OK: todos os testes SQL passaram"

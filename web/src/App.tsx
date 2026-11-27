@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { isSupabaseConfigured } from '@/lib/supabase'
 import { AuthProvider } from '@/hooks/useAuth'
@@ -6,26 +7,36 @@ import { RequireAuth, RequireRole } from '@/components/layout/RequireAuth'
 import Login from '@/pages/Login'
 import ResetPassword from '@/pages/ResetPassword'
 import SetupRequired from '@/pages/SetupRequired'
-import Dashboard from '@/pages/Dashboard'
-import Leads from '@/pages/Leads'
-import Imports from '@/pages/Imports'
-import Admin from '@/pages/Admin'
-import Crm from '@/pages/Crm'
-import MapPage from '@/pages/MapPage'
-import Agenda from '@/pages/Agenda'
-import Proposals from '@/pages/Proposals'
-import Clients from '@/pages/Clients'
-import Services from '@/pages/Services'
-import Reports from '@/pages/Reports'
-import Intelligence from '@/pages/Intelligence'
-import Opportunities from '@/pages/Opportunities'
-import MyOperation from '@/pages/MyOperation'
+const Dashboard = lazy(() => import('@/pages/Dashboard'))
+const Leads = lazy(() => import('@/pages/Leads'))
+const Imports = lazy(() => import('@/pages/Imports'))
+const Admin = lazy(() => import('@/pages/Admin'))
+const Crm = lazy(() => import('@/pages/Crm'))
+const MapPage = lazy(() => import('@/pages/MapPage'))
+const Agenda = lazy(() => import('@/pages/Agenda'))
+const Proposals = lazy(() => import('@/pages/Proposals'))
+const Clients = lazy(() => import('@/pages/Clients'))
+const Services = lazy(() => import('@/pages/Services'))
+const Reports = lazy(() => import('@/pages/Reports'))
+const Intelligence = lazy(() => import('@/pages/Intelligence'))
+const Opportunities = lazy(() => import('@/pages/Opportunities'))
+const MyOperation = lazy(() => import('@/pages/MyOperation'))
+const BusinessRadar = lazy(() => import('@/pages/BusinessRadar'))
+const SalesAutomations = lazy(() => import('@/pages/SalesAutomations'))
+const Campaigns = lazy(() => import('@/pages/Campaigns'))
+const ProposalDocument = lazy(() => import('@/pages/ProposalDocument'))
+const OperationalAgents = lazy(() => import('@/pages/OperationalAgents'))
+const MarketIntelligence = lazy(() => import('@/pages/MarketIntelligence'))
+const SalesCopilot = lazy(() => import('@/pages/SalesCopilot'))
+const RevenueIntelligence = lazy(() => import('@/pages/RevenueIntelligence'))
+const IntelligenceSegments = lazy(() => import('@/pages/IntelligenceSegments'))
 
 export default function App() {
   if (!isSupabaseConfigured) return <SetupRequired />
   return (
     <AuthProvider>
       <BrowserRouter>
+        <Suspense fallback={<p role="status" className="p-8 text-sm text-muted-foreground">Carregando módulo…</p>}>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/redefinir-senha" element={<ResetPassword />} />
@@ -36,9 +47,18 @@ export default function App() {
             <Route path="minha-operacao" element={<MyOperation />} />
             <Route path="crm" element={<Crm />} />
             <Route path="inteligencia" element={<Intelligence />} />
+            <Route path="radar" element={<BusinessRadar />} />
+            <Route path="automacoes" element={<SalesAutomations />} />
+            <Route path="agentes" element={<OperationalAgents />} />
+            <Route path="mercado" element={<MarketIntelligence />} />
+            <Route path="assistente" element={<SalesCopilot />} />
+            <Route path="receita" element={<RevenueIntelligence />} />
+            <Route path="segmentos" element={<IntelligenceSegments />} />
             <Route path="oportunidades" element={<Opportunities />} />
             <Route path="agenda" element={<Agenda />} />
+            <Route path="campanhas" element={<Campaigns />} />
             <Route path="propostas" element={<Proposals />} />
+            <Route path="propostas/:id/documento" element={<ProposalDocument />} />
             <Route path="clientes" element={<Clients />} />
             <Route path="servicos" element={<Services />} />
             <Route path="relatorios" element={<Reports />} />
@@ -47,6 +67,7 @@ export default function App() {
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </Suspense>
       </BrowserRouter>
     </AuthProvider>
   )
