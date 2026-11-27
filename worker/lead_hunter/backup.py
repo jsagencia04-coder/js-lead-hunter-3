@@ -27,7 +27,11 @@ import psycopg
 from psycopg import sql
 
 log = logging.getLogger(__name__)
-csv.field_size_limit(sys.maxsize)
+try:
+    csv.field_size_limit(sys.maxsize)
+except OverflowError:
+    # Windows: o C long interno do csv é de 32 bits; sys.maxsize (64 bits) não cabe.
+    csv.field_size_limit(2**31 - 1)
 
 # Ordem de restauração (pais antes dos filhos); tabelas novas entram no fim
 ORDER = [
