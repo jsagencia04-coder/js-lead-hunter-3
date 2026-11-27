@@ -31,6 +31,7 @@ MARKERS = {
     "20261126000013": "select to_regclass('public.opportunities') is not null",
     "20261126000014": "select to_regclass('public.digital_channels') is not null",
     "20261126000015": "select to_regclass('public.scoring_versions') is not null",
+    "20261127000016": "select to_regprocedure('public.my_operation_summary()') is not null",
 }
 
 

@@ -9,4 +9,5 @@ P="psql -q -X -v ON_ERROR_STOP=1 -d $DB"
 $P -f "$DIR/00_supabase_stub.sql"
 for f in "$DIR"/../migrations/*.sql; do $P -f "$f"; done
 $P -f "$DIR/01_behaviour.sql"
+$P -f "$DIR/02_my_operation.sql"
 echo "OK: todos os testes SQL passaram"

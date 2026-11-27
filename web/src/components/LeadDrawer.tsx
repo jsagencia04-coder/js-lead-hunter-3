@@ -119,11 +119,17 @@ export function LeadDrawer({ leadId, onClose, onChanged }: { leadId: string | nu
     setWebsite(detail?.website ?? '')
     if (detail) {
       const s = await supabase.from('contact_suppressions').select('id').eq('cnpj_basico', detail.cnpj_basico).maybeSingle()
-      setSuppressed(!!s.data)
+      // Falha ao verificar oposição não pode liberar ações externas por engano.
+      setSuppressed(!!s.data || !!s.error)
+      if (s.error) setError(s.error.message)
     }
   }, [leadId])
 
-  useEffect(() => { setLead(null); setTab('visao'); load() }, [load])
+  useEffect(() => {
+    setLead(null); setTab('visao'); setOpenOpp(null)
+    setNote(''); setContact(''); setBlockReason(''); setSuppressed(true)
+    load()
+  }, [load])
 
   if (!leadId) return null
 
@@ -191,7 +197,8 @@ export function LeadDrawer({ leadId, onClose, onChanged }: { leadId: string | nu
         </header>
 
         {!lead ? (
-          <div className="flex flex-1 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+          error ? <div className="p-5"><Alert tone="error">{error}</Alert><Button variant="outline" className="mt-3" onClick={load}>Tentar novamente</Button></div>
+            : <div role="status" aria-label="Carregando empresa" className="flex flex-1 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
         ) : (
           <>
             <TabList tabs={TABS} active={tab} onChange={setTab} />

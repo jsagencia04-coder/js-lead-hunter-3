@@ -164,7 +164,8 @@ def test_migrate_em_banco_criado_manualmente(fresh_db):
     first = migrate(fresh_db)
     # estruturais reconhecidas pelos marcadores; a correção de dados (007) é reaplicada sem efeito
     assert first == ["20261116000007_digital_presence_fix.sql", "20261116000008_accountant_domains.sql"]
-    assert len(q(fresh_db, "select * from app_migrations")) == 15
+    from lead_hunter.migrate import default_dir
+    assert len(q(fresh_db, "select * from app_migrations")) == len(list(default_dir().glob("*.sql")))
     # cópia de segurança dos dados comerciais antes de aplicar
     schemas = q(fresh_db, "select nspname from pg_namespace where nspname like 'backup_%%'")
     assert len(schemas) == 1
@@ -194,7 +195,8 @@ def test_migrate_em_banco_vazio(tmp_path):
     stub = Path(__file__).resolve().parents[2] / "supabase/tests/00_supabase_stub.sql"
     subprocess.run(["psql", url, "-q", "-X", "-v", "ON_ERROR_STOP=1", "-f", str(stub)], check=True, capture_output=True)
     try:
-        assert len(migrate(url)) == 15
+        from lead_hunter.migrate import default_dir
+        assert len(migrate(url)) == len(list(default_dir().glob("*.sql")))
         assert migrate(url) == []
     finally:
         with psycopg.connect(base, autocommit=True) as c:

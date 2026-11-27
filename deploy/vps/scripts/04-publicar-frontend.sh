@@ -9,18 +9,26 @@ source "$DIR/comum.sh"
 ANON_KEY="$(grep '^ANON_KEY=' "$SUPABASE_DIR/.env" | cut -d= -f2-)"
 [[ -n "$ANON_KEY" ]] || erro "ANON_KEY não encontrada em $SUPABASE_DIR/.env"
 
-REL="$BASE_DIR/www-versoes/$(date +%Y%m%d-%H%M)"
+# Evita duas publicações concorrentes e colisões entre versões no mesmo minuto.
+exec 9>"$BASE_DIR/.publicacao.lock"
+flock -n 9 || erro "já existe uma publicação em andamento"
+COMMIT="$(git -C "$APP_DIR" rev-parse --short HEAD)"
+REL="$BASE_DIR/www-versoes/$(date +%Y%m%d-%H%M%S)-$COMMIT"
 mkdir -p "$REL"
 
-log "Compilando o frontend (Node 22 em container)"
+log "Testando e compilando o frontend (Node 22 em container)"
 docker run --rm -v "$APP_DIR/web:/web" -w /web \
   -e VITE_SUPABASE_URL="https://$API_DOMAIN" -e VITE_SUPABASE_ANON_KEY="$ANON_KEY" \
-  node:22-alpine sh -c "npm ci --no-audit --no-fund && npm run build"
+  node:22-alpine sh -c "npm ci --no-audit --no-fund && npm test && npm run build"
 
 cp -a "$APP_DIR/web/dist/." "$REL/"
+printf '{"commit":"%s","publicado_em":"%s"}\n' "$COMMIT" "$(date -u +%FT%TZ)" > "$REL/release.json"
 chmod -R a+rX "$REL"
-ln -sfn "$REL" "$BASE_DIR/www"
-# Link relativo usado pelo container jslh-web (que só enxerga a pasta www-versoes)
-ln -sfn "$(basename "$REL")" "$BASE_DIR/www-versoes/atual"
+# rename(2) no mesmo filesystem: o link antigo permanece até a troca completa.
+ln -s "$REL" "$BASE_DIR/.www-novo-$$"
+mv -Tf "$BASE_DIR/.www-novo-$$" "$BASE_DIR/www"
+# Link relativo usado pelo container jslh-web (que só enxerga www-versoes).
+ln -s "$(basename "$REL")" "$BASE_DIR/www-versoes/.atual-novo-$$"
+mv -Tf "$BASE_DIR/www-versoes/.atual-novo-$$" "$BASE_DIR/www-versoes/atual"
 log "Publicado em $REL (links $BASE_DIR/www e www-versoes/atual). Para voltar: ln -sfn <versão anterior> $BASE_DIR/www-versoes/atual"
 log "A chave publicada é a ANON (pública). A SERVICE_ROLE nunca vai para o frontend."

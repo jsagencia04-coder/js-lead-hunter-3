@@ -9,6 +9,14 @@ Plataforma de inteligência comercial da **JS Designer**. Ela encontra empresas 
 
 > A base pública do CNPJ é atualizada **por competência** (mensalmente), não em tempo real. O sistema mostra sempre a competência vigente e a data de referência dos dados. Situação cadastral ativa **não** comprova regularidade fiscal.
 
+## Upgrade V3 — estado da entrega
+
+O desenvolvimento incremental está na branch `feature/js-lead-hunter-v3`. A release integrada
+`v3.0.0` **ainda não está concluída**. Funcionalidades publicadas, validações locais e bloqueios de
+publicação estão discriminados na pasta `claude/`, nos documentos de controle de entregas,
+publicação e reversão. Testes da interface: `cd web && npm ci && npm test`.
+Os fixtures sintéticos dos testes nunca devem ser carregados em produção.
+
 ## JS Lead Hunter 2.0 — módulos
 
 | Menu | O que faz |

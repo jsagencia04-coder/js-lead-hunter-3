@@ -44,6 +44,7 @@ const NAV_GROUPS: NavGroup[] = [
     id: 'operacao',
     label: 'Operação comercial',
     items: [
+      { to: '/minha-operacao', label: 'Minha operação', icon: Crosshair },
       { to: '/crm', label: 'CRM comercial', icon: KanbanSquare },
       { to: '/agenda', label: 'Agenda e tarefas', icon: CalendarCheck, badge: 'agenda' },
       { to: '/propostas', label: 'Propostas', icon: FileText },
@@ -133,12 +134,15 @@ export function AppLayout() {
   const openLead = useCallback((id: string) => setLeadId(id), [])
 
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
-    try { return JSON.parse(localStorage.getItem(GROUPS_COLLAPSED_KEY) ?? '{}') } catch { return {} }
+    try {
+      const value = JSON.parse(localStorage.getItem(GROUPS_COLLAPSED_KEY) ?? '{}')
+      return value && typeof value === 'object' && !Array.isArray(value) ? value : {}
+    } catch { return {} }
   })
   const toggleGroup = (id: string) => {
     setCollapsed((prev) => {
       const next = { ...prev, [id]: !prev[id] }
-      localStorage.setItem(GROUPS_COLLAPSED_KEY, JSON.stringify(next))
+      try { localStorage.setItem(GROUPS_COLLAPSED_KEY, JSON.stringify(next)) } catch { /* navegador sem armazenamento */ }
       return next
     })
   }
@@ -167,6 +171,8 @@ export function AppLayout() {
             <button
               type="button"
               onClick={() => toggleGroup(group.id)}
+              aria-expanded={!isCollapsed}
+              aria-label={`${isCollapsed ? 'Expandir' : 'Recolher'} ${group.label}`}
               className="flex w-full items-center justify-between rounded-md px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-sidebar-foreground/50 hover:text-sidebar-foreground/80"
             >
               <span>{group.label}</span>

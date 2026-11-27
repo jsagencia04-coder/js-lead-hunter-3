@@ -19,6 +19,7 @@ import Services from '@/pages/Services'
 import Reports from '@/pages/Reports'
 import Intelligence from '@/pages/Intelligence'
 import Opportunities from '@/pages/Opportunities'
+import MyOperation from '@/pages/MyOperation'
 
 export default function App() {
   if (!isSupabaseConfigured) return <SetupRequired />
@@ -32,6 +33,7 @@ export default function App() {
             <Route index element={<Dashboard />} />
             <Route path="leads" element={<Leads />} />
             <Route path="mapa" element={<MapPage />} />
+            <Route path="minha-operacao" element={<MyOperation />} />
             <Route path="crm" element={<Crm />} />
             <Route path="inteligencia" element={<Intelligence />} />
             <Route path="oportunidades" element={<Opportunities />} />
