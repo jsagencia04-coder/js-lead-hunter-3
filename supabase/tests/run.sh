@@ -10,4 +10,5 @@ $P -f "$DIR/00_supabase_stub.sql"
 for f in "$DIR"/../migrations/*.sql; do $P -f "$f"; done
 $P -f "$DIR/01_behaviour.sql"
 $P -f "$DIR/02_my_operation.sql"
+$P -f "$DIR/03_business_digital_twin.sql"
 echo "OK: todos os testes SQL passaram"
