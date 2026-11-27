@@ -1,0 +1,24 @@
+# Telas do JS Lead Hunter na VPS.
+#   cd /srv/js-lead-hunter/app/deploy/vps/web && docker compose up -d
+# No painel ICP (Web → Domínios → Criar), crie um site de proxy reverso do domínio para
+# http://127.0.0.1:8090 e ative o SSL. As telas são publicadas por scripts/04-publicar-frontend.sh.
+name: js-lead-hunter-web
+
+services:
+  web:
+    image: nginx:1.27-alpine
+    container_name: jslh-web
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8090:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      # Só as versões publicadas das telas (nunca a pasta com senhas e cópias do banco)
+      - /srv/js-lead-hunter/www-versoes:/srv/www:ro
+    mem_limit: 128m
+    networks: [supabase]
+
+networks:
+  supabase:
+    name: supabase_default
+    external: true

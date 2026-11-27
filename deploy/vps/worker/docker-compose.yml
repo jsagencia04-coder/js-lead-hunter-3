@@ -1,0 +1,60 @@
+# Worker do JS Lead Hunter na VPS, ligado à rede do Supabase auto-hospedado (rede "supabase_default").
+#   cd /srv/js-lead-hunter/app/deploy/vps/worker
+#   cp .env.vps.example .env && chmod 600 .env     (preencha a senha do banco)
+#   docker compose up -d --build
+#   docker compose logs -f worker intel
+#
+# Limites somam no máximo ~4 GB e 2 vCPU, para não atrapalhar os outros sistemas da VPS.
+name: js-lead-hunter-worker
+
+x-base: &base
+  build:
+    context: ../../..
+    dockerfile: worker/Dockerfile
+  env_file: ./.env
+  volumes:
+    - lead_hunter_data:/data
+  restart: unless-stopped
+  stop_grace_period: 1m
+  networks: [supabase]
+
+services:
+  migrate:
+    <<: *base
+    command: ["migrate"]
+    restart: "no"
+
+  worker:
+    <<: *base
+    command: ["run"]
+    mem_limit: 3g
+    cpus: 1.5
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  intel:
+    <<: *base
+    entrypoint: ["sh", "-c", "while true; do python -m lead_hunter intel --minutos 50; sleep 600; done"]
+    mem_limit: 768m
+    cpus: 0.5
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  manutencao:
+    <<: *base
+    entrypoint: ["sh", "-c", "while true; do python -m lead_hunter maintenance; sleep 86400; done"]
+    mem_limit: 256m
+    cpus: 0.25
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+networks:
+  supabase:
+    name: supabase_default
+    external: true
+
+volumes:
+  lead_hunter_data:

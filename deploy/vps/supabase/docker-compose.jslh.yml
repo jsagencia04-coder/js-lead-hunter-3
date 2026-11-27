@@ -1,0 +1,46 @@
+# Ajustes do JS Lead Hunter sobre o docker-compose.yml oficial do Supabase auto-hospedado.
+# Ativado por COMPOSE_FILE=docker-compose.yml:docker-compose.jslh.yml no .env (o configurar-env.sh faz isso).
+#
+# 1. Nenhuma porta aberta para a internet: API e pooler só em 127.0.0.1.
+#    O HTTPS é feito pelo Nginx/painel da VPS, que encaminha para 127.0.0.1:8000.
+# 2. Limites de memória e CPU para não atrapalhar os outros sistemas da VPS
+#    (soma máxima ~6 GB e 2 vCPU no banco; ver deploy/vps/README.md).
+
+services:
+  api-gw:
+    ports: !override
+      - "127.0.0.1:${API_GW_HTTP_PORT:-8000}:8000/tcp"
+    mem_limit: 256m
+
+  supavisor:
+    ports: !override
+      # Portas do HOST diferentes das padrão, para não conflitar com um PostgreSQL já existente na VPS.
+      # (POSTGRES_PORT no .env continua 5432: ele também é usado dentro da rede do Docker.)
+      - "127.0.0.1:55432:5432"
+      - "127.0.0.1:56543:6543"
+    mem_limit: 512m
+
+  db:
+    mem_limit: 2560m
+    cpus: 2
+
+  studio:
+    mem_limit: 512m
+  auth:
+    mem_limit: 256m
+  rest:
+    mem_limit: 256m
+  realtime:
+    mem_limit: 512m
+  storage:
+    mem_limit: 256m
+  imgproxy:
+    mem_limit: 256m
+  meta:
+    mem_limit: 256m
+
+  functions:
+    mem_limit: 512m
+    environment:
+      # Origem permitida para a função invite-user (o domínio das telas)
+      ALLOWED_ORIGIN: ${ALLOWED_ORIGIN:-*}
