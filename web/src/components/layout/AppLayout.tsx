@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, Building2, Map, Radar, Target, KanbanSquare, CalendarCheck, FileText, Handshake, Package,
-  BarChart3, DatabaseZap, ShieldCheck, LogOut, Menu, X, Crosshair, Search, Loader2,
+  BarChart3, DatabaseZap, ShieldCheck, LogOut, Menu, X, Crosshair, Search, Loader2, ChevronDown,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { ROLE_LABEL, type AppRole } from '@/lib/types'
@@ -20,20 +20,46 @@ interface NavItem {
   badge?: 'agenda'
 }
 
-const NAV: NavItem[] = [
-  { to: '/', label: 'Visão geral', icon: LayoutDashboard },
-  { to: '/leads', label: 'Base de empresas', icon: Building2 },
-  { to: '/mapa', label: 'Mapa de oportunidades', icon: Map },
-  { to: '/inteligencia', label: 'Inteligência digital', icon: Radar },
-  { to: '/oportunidades', label: 'Central de oportunidades', icon: Target },
-  { to: '/crm', label: 'CRM comercial', icon: KanbanSquare },
-  { to: '/agenda', label: 'Agenda e tarefas', icon: CalendarCheck, badge: 'agenda' },
-  { to: '/propostas', label: 'Propostas', icon: FileText },
-  { to: '/clientes', label: 'Clientes', icon: Handshake },
-  { to: '/servicos', label: 'Serviços', icon: Package },
-  { to: '/relatorios', label: 'Relatórios', icon: BarChart3 },
-  { to: '/importacao', label: 'Central de importação', icon: DatabaseZap, roles: ['admin', 'gestor'] },
-  { to: '/admin', label: 'Administração', icon: ShieldCheck, roles: ['admin'] },
+interface NavGroup {
+  id: string
+  label: string
+  items: NavItem[]
+}
+
+// Agrupamento do menu (upgrade v3): preserva todas as rotas atuais, só reorganiza a navegação
+// em grupos recolhíveis, conforme os módulos definidos para o JS Lead Hunter 3.0.
+const NAV_GROUPS: NavGroup[] = [
+  {
+    id: 'inteligencia',
+    label: 'Inteligência',
+    items: [
+      { to: '/', label: 'Visão geral', icon: LayoutDashboard },
+      { to: '/leads', label: 'Base de empresas', icon: Building2 },
+      { to: '/mapa', label: 'Mapa de oportunidades', icon: Map },
+      { to: '/inteligencia', label: 'Inteligência digital', icon: Radar },
+      { to: '/oportunidades', label: 'Central de oportunidades', icon: Target },
+    ],
+  },
+  {
+    id: 'operacao',
+    label: 'Operação comercial',
+    items: [
+      { to: '/crm', label: 'CRM comercial', icon: KanbanSquare },
+      { to: '/agenda', label: 'Agenda e tarefas', icon: CalendarCheck, badge: 'agenda' },
+      { to: '/propostas', label: 'Propostas', icon: FileText },
+      { to: '/clientes', label: 'Clientes', icon: Handshake },
+      { to: '/servicos', label: 'Serviços', icon: Package },
+    ],
+  },
+  {
+    id: 'gestao',
+    label: 'Gestão',
+    items: [
+      { to: '/relatorios', label: 'Relatórios', icon: BarChart3 },
+      { to: '/importacao', label: 'Central de importação', icon: DatabaseZap, roles: ['admin', 'gestor'] },
+      { to: '/admin', label: 'Administração', icon: ShieldCheck, roles: ['admin'] },
+    ],
+  },
 ]
 
 interface Hit { id: string; cnpj: string; razao_social: string | null; nome_fantasia: string | null; municipio: string | null; uf: string | null }
@@ -92,6 +118,8 @@ function GlobalSearch({ onOpen }: { onOpen: (id: string) => void }) {
   )
 }
 
+const GROUPS_COLLAPSED_KEY = 'jslh:menu-recolhido'
+
 export function AppLayout() {
   const { profile, signOut, hasRole } = useAuth()
   const [open, setOpen] = useState(false)
@@ -99,8 +127,21 @@ export function AppLayout() {
   const [late, setLate] = useState(0)
   const location = useLocation()
 
-  const items = NAV.filter((i) => !i.roles || hasRole(...i.roles))
+  const groups = NAV_GROUPS
+    .map((g) => ({ ...g, items: g.items.filter((i) => !i.roles || hasRole(...i.roles)) }))
+    .filter((g) => g.items.length > 0)
   const openLead = useCallback((id: string) => setLeadId(id), [])
+
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
+    try { return JSON.parse(localStorage.getItem(GROUPS_COLLAPSED_KEY) ?? '{}') } catch { return {} }
+  })
+  const toggleGroup = (id: string) => {
+    setCollapsed((prev) => {
+      const next = { ...prev, [id]: !prev[id] }
+      localStorage.setItem(GROUPS_COLLAPSED_KEY, JSON.stringify(next))
+      return next
+    })
+  }
 
   useEffect(() => {
     supabase.rpc('my_agenda', { p_all: false }).then(({ data }) => setLate(Number((data as { atrasadas?: number })?.atrasadas ?? 0)))
@@ -117,26 +158,45 @@ export function AppLayout() {
           <p className="text-[11px] text-sidebar-foreground/60">JS Designer</p>
         </div>
       </div>
-      {items.map((item) => (
-        <NavLink
-          key={item.to}
-          to={item.to}
-          end={item.to === '/'}
-          onClick={() => setOpen(false)}
-          className={({ isActive }) =>
-            cn(
-              'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-              isActive ? 'bg-white/10 font-medium text-white' : 'text-sidebar-foreground hover:bg-white/5 hover:text-white',
-            )
-          }
-        >
-          <item.icon className="h-4 w-4 shrink-0" />
-          <span className="flex-1">{item.label}</span>
-          {item.badge === 'agenda' && late > 0 && (
-            <span className="rounded-full bg-red-500 px-1.5 text-[11px] font-semibold text-white" title="Tarefas atrasadas">{late}</span>
-          )}
-        </NavLink>
-      ))}
+
+      {groups.map((group) => {
+        const isCollapsed = !!collapsed[group.id]
+        const hasActive = group.items.some((i) => (i.to === '/' ? location.pathname === '/' : location.pathname.startsWith(i.to)))
+        return (
+          <div key={group.id} className="mb-1">
+            <button
+              type="button"
+              onClick={() => toggleGroup(group.id)}
+              className="flex w-full items-center justify-between rounded-md px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-sidebar-foreground/50 hover:text-sidebar-foreground/80"
+            >
+              <span>{group.label}</span>
+              <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', isCollapsed && '-rotate-90')} />
+            </button>
+            {!isCollapsed && group.items.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.to === '/'}
+                onClick={() => setOpen(false)}
+                className={({ isActive }) =>
+                  cn(
+                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
+                    isActive ? 'bg-white/10 font-medium text-white' : 'text-sidebar-foreground hover:bg-white/5 hover:text-white',
+                  )
+                }
+              >
+                <item.icon className="h-4 w-4 shrink-0" />
+                <span className="flex-1">{item.label}</span>
+                {item.badge === 'agenda' && late > 0 && (
+                  <span className="rounded-full bg-red-500 px-1.5 text-[11px] font-semibold text-white" title="Tarefas atrasadas">{late}</span>
+                )}
+              </NavLink>
+            ))}
+            {isCollapsed && hasActive && <span className="ml-3 block h-1 w-1 rounded-full bg-primary" />}
+          </div>
+        )
+      })}
+
       <div className="mt-auto border-t border-white/10 px-2 pt-3">
         <p className="truncate text-sm text-white">{profile?.full_name ?? profile?.email}</p>
         <p className="mb-3 text-xs text-sidebar-foreground/60">{profile ? ROLE_LABEL[profile.role] : ''}</p>
