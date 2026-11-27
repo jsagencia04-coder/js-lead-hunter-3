@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react'
-import { Ban, Loader2, MessageSquarePlus, PhoneCall, X } from 'lucide-react'
+import {
+  Ban, Building2, History, KanbanSquare, Loader2, MessageSquarePlus, PhoneCall, Radar, FileText, X,
+} from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { STAGE_LABEL, type LeadRow, type LeadStage, type Profile } from '@/lib/types'
 import { brl, formatCnpj, formatDate, formatDateTime, PORTE_LABEL } from '@/lib/utils'
@@ -10,6 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
 import { Alert } from '@/components/ui/alert'
+import { TabList, TabPanel, type TabDef } from '@/components/ui/tabs'
 import { ApproachSection, ProposalsSection, type Diagnosis } from '@/components/LeadCommercial'
 import { AssistantSection, ChannelsSection, ContractsSection, OpportunitiesSection, TagsSection, TasksSection, type Assistant } from '@/components/LeadCrm'
 
@@ -59,9 +62,20 @@ const DIGITAL: Record<string, string> = {
 }
 const SITUACAO: Record<string, string> = { '01': 'Nula', '02': 'Ativa', '03': 'Suspensa', '04': 'Inapta', '08': 'Baixada' }
 
+// Ficha 360° (upgrade v3): as seções que já existiam continuam as mesmas, só organizadas em
+// abas em vez de uma lista vertical longa.
+const TABS: TabDef[] = [
+  { id: 'visao', label: 'Visão geral', icon: Building2 },
+  { id: 'digital', label: 'DNA Digital', icon: Radar },
+  { id: 'crm', label: 'CRM e tarefas', icon: KanbanSquare },
+  { id: 'propostas', label: 'Propostas', icon: FileText },
+  { id: 'historico', label: 'Histórico', icon: History },
+]
+
 export function LeadDrawer({ leadId, onClose, onChanged }: { leadId: string | null; onClose: () => void; onChanged?: () => void }) {
   const { profile, hasRole } = useAuth()
   const canEdit = hasRole('admin', 'gestor', 'comercial')
+  const [tab, setTab] = useState('visao')
   const [lead, setLead] = useState<LeadDetail | null>(null)
   const [extra, setExtra] = useState<LeadExtra | null>(null)
   const [recs, setRecs] = useState<Recommendation[]>([])
@@ -109,7 +123,7 @@ export function LeadDrawer({ leadId, onClose, onChanged }: { leadId: string | nu
     }
   }, [leadId])
 
-  useEffect(() => { setLead(null); load() }, [load])
+  useEffect(() => { setLead(null); setTab('visao'); load() }, [load])
 
   if (!leadId) return null
 
@@ -179,162 +193,182 @@ export function LeadDrawer({ leadId, onClose, onChanged }: { leadId: string | nu
         {!lead ? (
           <div className="flex flex-1 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
         ) : (
-          <div className="space-y-6 p-5">
-            {error && <Alert tone="error">{error}</Alert>}
+          <>
+            <TabList tabs={TABS} active={tab} onChange={setTab} />
+            <div className="space-y-6 p-5">
+              {error && <Alert tone="error">{error}</Alert>}
 
-            <Section title="Dados cadastrais">
-              <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                <Item k="Abertura" v={formatDate(lead.data_inicio_atividade)} />
-                <Item k="Local" v={`${lead.municipio ?? '—'} / ${lead.uf ?? '—'}`} />
-                <Item k="CNAE principal" v={`${lead.cnae_principal ?? ''} ${lead.cnae_descricao ?? ''}`} wide />
-                <Item k="Porte" v={PORTE_LABEL[lead.porte ?? ''] ?? '—'} />
-                <Item k="Capital social" v={lead.capital_social != null ? brl.format(lead.capital_social) : '—'} />
-                <Item k="Simples / MEI" v={`${lead.opcao_simples ? 'Simples' : 'Não optante'}${lead.opcao_mei ? ' · MEI' : ''}`} />
-                <Item k="CNAEs secundários" v={lead.cnaes_secundarios?.length ? lead.cnaes_secundarios.join(', ') : '—'} />
-                <Item k="Telefone" v={phone ?? 'não informado'} />
-                <Item k="E-mail" v={lead.email ?? 'não informado'} />
-                <Item k="Presença digital" v={DIGITAL[extra?.digital_presence?.status ?? ''] ?? 'ainda não verificada'} />
-                <Item k="Site" v={lead.website ?? '—'} />
-              </dl>
-              <p className="mt-3 text-xs text-muted-foreground">
-                Situação cadastral ativa não comprova regularidade fiscal. Dados da base pública do CNPJ (Receita Federal).
-              </p>
-              {!suppressed && (phone || lead.email) && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {phone && <a href={`tel:+${waNumber}`}><Button variant="outline" size="sm"><PhoneCall className="h-4 w-4" /> Ligar</Button></a>}
-                  {waNumber && <a href={`https://wa.me/${waNumber}`} target="_blank" rel="noreferrer"><Button variant="outline" size="sm">Abrir WhatsApp</Button></a>}
-                  {lead.email && <a href={`mailto:${lead.email}`}><Button variant="outline" size="sm">Enviar e-mail</Button></a>}
-                </div>
-              )}
-            </Section>
+              <TabPanel active={tab} id="visao">
+                <div className="space-y-6">
+                  <Section title="Dados cadastrais">
+                    <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                      <Item k="Abertura" v={formatDate(lead.data_inicio_atividade)} />
+                      <Item k="Local" v={`${lead.municipio ?? '—'} / ${lead.uf ?? '—'}`} />
+                      <Item k="CNAE principal" v={`${lead.cnae_principal ?? ''} ${lead.cnae_descricao ?? ''}`} wide />
+                      <Item k="Porte" v={PORTE_LABEL[lead.porte ?? ''] ?? '—'} />
+                      <Item k="Capital social" v={lead.capital_social != null ? brl.format(lead.capital_social) : '—'} />
+                      <Item k="Simples / MEI" v={`${lead.opcao_simples ? 'Simples' : 'Não optante'}${lead.opcao_mei ? ' · MEI' : ''}`} />
+                      <Item k="CNAEs secundários" v={lead.cnaes_secundarios?.length ? lead.cnaes_secundarios.join(', ') : '—'} />
+                      <Item k="Telefone" v={phone ?? 'não informado'} />
+                      <Item k="E-mail" v={lead.email ?? 'não informado'} />
+                      <Item k="Presença digital" v={DIGITAL[extra?.digital_presence?.status ?? ''] ?? 'ainda não verificada'} />
+                      <Item k="Site" v={lead.website ?? '—'} />
+                    </dl>
+                    <p className="mt-3 text-xs text-muted-foreground">
+                      Situação cadastral ativa não comprova regularidade fiscal. Dados da base pública do CNPJ (Receita Federal).
+                    </p>
+                    {!suppressed && (phone || lead.email) && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {phone && <a href={`tel:+${waNumber}`}><Button variant="outline" size="sm"><PhoneCall className="h-4 w-4" /> Ligar</Button></a>}
+                        {waNumber && <a href={`https://wa.me/${waNumber}`} target="_blank" rel="noreferrer"><Button variant="outline" size="sm">Abrir WhatsApp</Button></a>}
+                        {lead.email && <a href={`mailto:${lead.email}`}><Button variant="outline" size="sm">Enviar e-mail</Button></a>}
+                      </div>
+                    )}
+                  </Section>
 
-            <Section title="Pontuação e recomendações">
-              <div className="grid gap-4 md:grid-cols-2">
-                <ul className="space-y-1 text-sm">
-                  {Object.entries(extra?.score_breakdown ?? {}).map(([k, v]) => (
-                    <li key={k} className="flex justify-between"><span className="text-muted-foreground">{SCORE_LABEL[k] ?? k}</span><span className="tabular-nums">{v}</span></li>
-                  ))}
-                  {!Object.keys(extra?.score_breakdown ?? {}).length && <li className="text-muted-foreground">Pontuação ainda não calculada.</li>}
-                </ul>
-                <ul className="space-y-2 text-sm">
-                  {recs.map((r, i) => (
-                    <li key={i}>
-                      <span className="font-medium">{r.service_catalog?.name}</span>
-                      <span className="ml-1 text-xs text-muted-foreground">({r.relevance})</span>
-                      {r.reason && <p className="text-xs text-muted-foreground">{r.reason}</p>}
-                    </li>
-                  ))}
-                  {!recs.length && <li className="text-muted-foreground">Nenhuma recomendação para este perfil.</li>}
-                </ul>
-              </div>
-            </Section>
-
-            <Section title="Assistente comercial: diagnóstico e próxima ação">
-              <AssistantSection a={diagnosis} />
-            </Section>
-
-            <Section title="Oportunidades (funil)">
-              <OpportunitiesSection leadId={leadId} canEdit={canEdit} suppressed={suppressed} userId={profile!.id} owners={owners}
-                onChanged={() => { load(); onChanged?.() }} onOpenOpp={setOpenOpp} />
-            </Section>
-
-            <Section title="Agenda e tarefas">
-              <TasksSection leadId={leadId} opportunityId={openOpp} canEdit={canEdit} suppressed={suppressed} userId={profile!.id}
-                owners={owners} onChanged={() => { load(); onChanged?.() }} />
-            </Section>
-
-            <Section title="Presença digital">
-              <ChannelsSection leadId={leadId} canEdit={canEdit} canReset={hasRole('admin', 'gestor')} />
-            </Section>
-
-            <Section title="Abordagem sugerida">
-              <ApproachSection lead={lead} diagnosis={diagnosis as unknown as Diagnosis} dominio={extra?.digital_presence?.dominio ?? null}
-                suppressed={suppressed} canEdit={canEdit} userName={profile?.full_name ?? null} userId={profile!.id}
-                leadId={leadId} onChanged={() => { load(); onChanged?.() }} />
-            </Section>
-
-            <Section title="Propostas e negociação">
-              <ProposalsSection leadId={leadId} opportunityId={openOpp} canEdit={canEdit} userId={profile!.id} onChanged={() => { load(); onChanged?.() }} />
-            </Section>
-
-            <Section title="Contratos e pós-venda">
-              <ContractsSection leadId={leadId} opportunityId={openOpp} canEdit={canEdit} userId={profile!.id} onChanged={() => { load(); onChanged?.() }} />
-            </Section>
-
-            <Section title="Tags e segmentos">
-              <TagsSection leadId={leadId} canEdit={canEdit} userId={profile!.id} />
-            </Section>
-
-            {canEdit && (
-              <Section title="Gestão comercial">
-                <div className="grid gap-3 md:grid-cols-2">
-                  <div className="space-y-1">
-                    <Label>Responsável pela empresa</Label>
-                    <Select value={lead.owner_id ?? ''} disabled={busy} onChange={(e) => updateLead({ owner_id: e.target.value || null })}>
-                      <option value="">Sem responsável</option>
-                      {owners.map((o) => <option key={o.id} value={o.id}>{o.full_name ?? o.email}</option>)}
-                    </Select>
-                  </div>
-                  <div className="space-y-1">
-                    <Label>Site da empresa</Label>
-                    <div className="flex gap-2">
-                      <Input value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://" />
-                      <Button variant="outline" disabled={busy} onClick={() => updateLead({ website: website.trim() || null })}>Salvar</Button>
+                  <Section title="Pontuação e recomendações">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <ul className="space-y-1 text-sm">
+                        {Object.entries(extra?.score_breakdown ?? {}).map(([k, v]) => (
+                          <li key={k} className="flex justify-between"><span className="text-muted-foreground">{SCORE_LABEL[k] ?? k}</span><span className="tabular-nums">{v}</span></li>
+                        ))}
+                        {!Object.keys(extra?.score_breakdown ?? {}).length && <li className="text-muted-foreground">Pontuação ainda não calculada.</li>}
+                      </ul>
+                      <ul className="space-y-2 text-sm">
+                        {recs.map((r, i) => (
+                          <li key={i}>
+                            <span className="font-medium">{r.service_catalog?.name}</span>
+                            <span className="ml-1 text-xs text-muted-foreground">({r.relevance})</span>
+                            {r.reason && <p className="text-xs text-muted-foreground">{r.reason}</p>}
+                          </li>
+                        ))}
+                        {!recs.length && <li className="text-muted-foreground">Nenhuma recomendação para este perfil.</li>}
+                      </ul>
                     </div>
-                  </div>
+                  </Section>
+
+                  <Section title="Assistente comercial: diagnóstico e próxima ação">
+                    <AssistantSection a={diagnosis} />
+                  </Section>
                 </div>
+              </TabPanel>
 
-                <form onSubmit={(e) => addEvent(e, contactKind)} className="mt-4 grid gap-2 md:grid-cols-[11rem_9rem_1fr_auto]">
-                  <Select value={contactKind} onChange={(e) => setContactKind(e.target.value as 'contato' | 'resposta_recebida')} aria-label="Tipo">
-                    <option value="contato">Contato feito</option>
-                    <option value="resposta_recebida">Resposta recebida</option>
-                  </Select>
-                  <Select value={channel} onChange={(e) => setChannel(e.target.value)} aria-label="Canal">
-                    <option value="telefone">Telefone</option>
-                    <option value="whatsapp">WhatsApp</option>
-                    <option value="email">E-mail</option>
-                    <option value="presencial">Presencial</option>
-                    <option value="outro">Outro</option>
-                  </Select>
-                  <Input value={contact} onChange={(e) => setContact(e.target.value)} placeholder="Resumo do contato" />
-                  <Button type="submit" disabled={busy || suppressed || !contact.trim()}><PhoneCall className="h-4 w-4" /> Registrar</Button>
-                </form>
-                <form onSubmit={(e) => addEvent(e, 'anotacao')} className="mt-2 flex gap-2">
-                  <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Nova anotação" />
-                  <Button type="submit" variant="outline" disabled={busy || !note.trim()}><MessageSquarePlus className="h-4 w-4" /> Anotar</Button>
-                </form>
+              <TabPanel active={tab} id="digital">
+                <Section title="Presença digital">
+                  <ChannelsSection leadId={leadId} canEdit={canEdit} canReset={hasRole('admin', 'gestor')} />
+                </Section>
+              </TabPanel>
 
-                {!suppressed && (
-                  <form onSubmit={block} className="mt-4 flex gap-2 border-t pt-4">
-                    <Input value={blockReason} onChange={(e) => setBlockReason(e.target.value)} placeholder="Motivo do bloqueio (ex.: pediu para não ser contatado)" />
-                    <Button type="submit" variant="destructive" disabled={busy || !blockReason.trim()}><Ban className="h-4 w-4" /> Bloquear</Button>
-                  </form>
-                )}
-              </Section>
-            )}
+              <TabPanel active={tab} id="crm">
+                <div className="space-y-6">
+                  <Section title="Oportunidades (funil)">
+                    <OpportunitiesSection leadId={leadId} canEdit={canEdit} suppressed={suppressed} userId={profile!.id} owners={owners}
+                      onChanged={() => { load(); onChanged?.() }} onOpenOpp={setOpenOpp} />
+                  </Section>
 
-            <Section title="Histórico">
-              <ol className="space-y-3 border-l pl-4">
-                {events.map((ev) => (
-                  <li key={ev.id} className="relative text-sm">
-                    <span className="absolute -left-[21px] top-1.5 h-2 w-2 rounded-full bg-primary" />
-                    <p>
-                      <span className="font-medium">{EVENT_LABEL[ev.event_type] ?? ev.event_type}</span>
-                      {ev.event_type === 'mudanca_etapa' && ev.from_stage && ev.to_stage && (
-                        <span className="text-muted-foreground"> · {STAGE_LABEL[ev.from_stage]} → {STAGE_LABEL[ev.to_stage]}</span>
+                  <Section title="Agenda e tarefas">
+                    <TasksSection leadId={leadId} opportunityId={openOpp} canEdit={canEdit} suppressed={suppressed} userId={profile!.id}
+                      owners={owners} onChanged={() => { load(); onChanged?.() }} />
+                  </Section>
+
+                  <Section title="Tags e segmentos">
+                    <TagsSection leadId={leadId} canEdit={canEdit} userId={profile!.id} />
+                  </Section>
+
+                  {canEdit && (
+                    <Section title="Gestão comercial">
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <div className="space-y-1">
+                          <Label>Responsável pela empresa</Label>
+                          <Select value={lead.owner_id ?? ''} disabled={busy} onChange={(e) => updateLead({ owner_id: e.target.value || null })}>
+                            <option value="">Sem responsável</option>
+                            {owners.map((o) => <option key={o.id} value={o.id}>{o.full_name ?? o.email}</option>)}
+                          </Select>
+                        </div>
+                        <div className="space-y-1">
+                          <Label>Site da empresa</Label>
+                          <div className="flex gap-2">
+                            <Input value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://" />
+                            <Button variant="outline" disabled={busy} onClick={() => updateLead({ website: website.trim() || null })}>Salvar</Button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <form onSubmit={(e) => addEvent(e, contactKind)} className="mt-4 grid gap-2 md:grid-cols-[11rem_9rem_1fr_auto]">
+                        <Select value={contactKind} onChange={(e) => setContactKind(e.target.value as 'contato' | 'resposta_recebida')} aria-label="Tipo">
+                          <option value="contato">Contato feito</option>
+                          <option value="resposta_recebida">Resposta recebida</option>
+                        </Select>
+                        <Select value={channel} onChange={(e) => setChannel(e.target.value)} aria-label="Canal">
+                          <option value="telefone">Telefone</option>
+                          <option value="whatsapp">WhatsApp</option>
+                          <option value="email">E-mail</option>
+                          <option value="presencial">Presencial</option>
+                          <option value="outro">Outro</option>
+                        </Select>
+                        <Input value={contact} onChange={(e) => setContact(e.target.value)} placeholder="Resumo do contato" />
+                        <Button type="submit" disabled={busy || suppressed || !contact.trim()}><PhoneCall className="h-4 w-4" /> Registrar</Button>
+                      </form>
+                      <form onSubmit={(e) => addEvent(e, 'anotacao')} className="mt-2 flex gap-2">
+                        <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Nova anotação" />
+                        <Button type="submit" variant="outline" disabled={busy || !note.trim()}><MessageSquarePlus className="h-4 w-4" /> Anotar</Button>
+                      </form>
+
+                      {!suppressed && (
+                        <form onSubmit={block} className="mt-4 flex gap-2 border-t pt-4">
+                          <Input value={blockReason} onChange={(e) => setBlockReason(e.target.value)} placeholder="Motivo do bloqueio (ex.: pediu para não ser contatado)" />
+                          <Button type="submit" variant="destructive" disabled={busy || !blockReason.trim()}><Ban className="h-4 w-4" /> Bloquear</Button>
+                        </form>
                       )}
-                      {ev.channel && <span className="text-muted-foreground"> · {ev.channel}</span>}
-                      {ev.scheduled_for && <span className="text-muted-foreground"> · {formatDateTime(ev.scheduled_for)}</span>}
-                    </p>
-                    {ev.content && <p className="whitespace-pre-wrap">{ev.content}</p>}
-                    <p className="text-xs text-muted-foreground">
-                      {formatDateTime(ev.created_at)} · {ev.actor_id ? people[ev.actor_id] ?? 'usuário' : 'sistema'}
-                    </p>
-                  </li>
-                ))}
-              </ol>
-            </Section>
-          </div>
+                    </Section>
+                  )}
+                </div>
+              </TabPanel>
+
+              <TabPanel active={tab} id="propostas">
+                <div className="space-y-6">
+                  <Section title="Abordagem sugerida">
+                    <ApproachSection lead={lead} diagnosis={diagnosis as unknown as Diagnosis} dominio={extra?.digital_presence?.dominio ?? null}
+                      suppressed={suppressed} canEdit={canEdit} userName={profile?.full_name ?? null} userId={profile!.id}
+                      leadId={leadId} onChanged={() => { load(); onChanged?.() }} />
+                  </Section>
+
+                  <Section title="Propostas e negociação">
+                    <ProposalsSection leadId={leadId} opportunityId={openOpp} canEdit={canEdit} userId={profile!.id} onChanged={() => { load(); onChanged?.() }} />
+                  </Section>
+
+                  <Section title="Contratos e pós-venda">
+                    <ContractsSection leadId={leadId} opportunityId={openOpp} canEdit={canEdit} userId={profile!.id} onChanged={() => { load(); onChanged?.() }} />
+                  </Section>
+                </div>
+              </TabPanel>
+
+              <TabPanel active={tab} id="historico">
+                <Section title="Histórico">
+                  <ol className="space-y-3 border-l pl-4">
+                    {events.map((ev) => (
+                      <li key={ev.id} className="relative text-sm">
+                        <span className="absolute -left-[21px] top-1.5 h-2 w-2 rounded-full bg-primary" />
+                        <p>
+                          <span className="font-medium">{EVENT_LABEL[ev.event_type] ?? ev.event_type}</span>
+                          {ev.event_type === 'mudanca_etapa' && ev.from_stage && ev.to_stage && (
+                            <span className="text-muted-foreground"> · {STAGE_LABEL[ev.from_stage]} → {STAGE_LABEL[ev.to_stage]}</span>
+                          )}
+                          {ev.channel && <span className="text-muted-foreground"> · {ev.channel}</span>}
+                          {ev.scheduled_for && <span className="text-muted-foreground"> · {formatDateTime(ev.scheduled_for)}</span>}
+                        </p>
+                        {ev.content && <p className="whitespace-pre-wrap">{ev.content}</p>}
+                        <p className="text-xs text-muted-foreground">
+                          {formatDateTime(ev.created_at)} · {ev.actor_id ? people[ev.actor_id] ?? 'usuário' : 'sistema'}
+                        </p>
+                      </li>
+                    ))}
+                    {!events.length && <li className="text-sm text-muted-foreground">Sem eventos registrados ainda.</li>}
+                  </ol>
+                </Section>
+              </TabPanel>
+            </div>
+          </>
         )}
       </aside>
     </div>
