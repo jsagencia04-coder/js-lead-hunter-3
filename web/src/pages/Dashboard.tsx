@@ -2,13 +2,15 @@ import { useState } from 'react'
 import { useCachedQuery } from '@/lib/cache'
 import { DataStatus } from '@/components/DataStatus'
 import { Link } from 'react-router-dom'
-import { Loader2, RefreshCw } from 'lucide-react'
+import { BarChart3, Loader2, RefreshCw } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import type { ChartItem, CommercialMetrics, DashboardMetrics } from '@/lib/types'
 import { PerfTable, type Executive } from '@/pages/Reports'
 import { brl, formatDate, formatDateTime, nf, UFS } from '@/lib/utils'
 import { PageHeader } from '@/components/layout/AppLayout'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { KpiGridSkeleton } from '@/components/ui/skeleton'
+import { EmptyState } from '@/components/ui/empty-state'
 import { Alert } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Select } from '@/components/ui/select'
@@ -38,6 +40,7 @@ export default function Dashboard() {
 
   const cur = data?.competencia_vigente
   const semDados = data && data.total === 0
+  const primeiraCarga = loading && !data && !com && !ex
 
   return (
     <>
@@ -93,6 +96,7 @@ export default function Dashboard() {
       )}
 
       <h2 className="mb-3 text-sm font-semibold text-muted-foreground">Indicadores comerciais · {formatDate(ex?.periodo?.de)} a {formatDate(ex?.periodo?.ate)} (receita do período)</h2>
+      {primeiraCarga ? <KpiGridSkeleton count={12} /> : (
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
         <Kpi label="Leads qualificados" value={n(ex?.comerciais.leads_qualificados)} />
         <Kpi label="Leads contatados" value={n(ex?.comerciais.leads_contatados)} />
@@ -107,6 +111,7 @@ export default function Dashboard() {
         <Kpi label="Conversão (oportunidades)" value={n(ex?.comerciais.taxa_conversao_oportunidades)} suffix="%" />
         <Kpi label="Follow-ups atrasados" value={n(ex?.comerciais.follow_ups_atrasados)} />
       </div>
+      )}
       {ex && (
         <details className="mt-2 text-xs text-muted-foreground">
           <summary className="cursor-pointer">Como cada taxa é calculada</summary>
@@ -118,6 +123,7 @@ export default function Dashboard() {
       )}
 
       <h2 className="mb-3 mt-8 text-sm font-semibold text-muted-foreground">Inteligência e base histórica</h2>
+      {primeiraCarga ? <KpiGridSkeleton count={12} /> : (
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
         <Kpi label="Total histórico de empresas" value={n(ex?.cadastrais.total_historico)} />
         <Kpi label="Empresas pesquisadas" value={n(ex?.cadastrais.pesquisadas)} />
@@ -132,6 +138,7 @@ export default function Dashboard() {
         <Kpi label="Clientes convertidos" value={com?.clientes_convertidos} />
         <Kpi label="Leads na base" value={com?.leads_total} />
       </div>
+      )}
       {ex && Array.isArray(ex.cadastrais.novas_por_competencia) && (
         <p className="mt-2 text-xs text-muted-foreground">Novas empresas por competência: {(ex.cadastrais.novas_por_competencia as { competencia: string; total: number }[])
           .map((x) => `${x.competencia}: ${nf.format(x.total)}`).join(' · ') || '—'}</p>
@@ -145,6 +152,7 @@ export default function Dashboard() {
       </div>
 
       <h2 className="mb-3 mt-8 text-sm font-semibold text-muted-foreground">Base de empresas (Receita Federal)</h2>
+      {primeiraCarga ? <KpiGridSkeleton count={8} /> : (
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
         <Kpi label="Empresas encontradas" value={data?.total} />
         <Kpi label="Empresas ativas" value={data?.ativas} />
@@ -155,6 +163,7 @@ export default function Dashboard() {
         <Kpi label="Com telefone" value={data?.com_telefone} />
         <Kpi label="Com e-mail" value={data?.com_email} />
       </div>
+      )}
       <p className="mt-2 text-xs text-muted-foreground">
         Períodos contados a partir da data de referência da base ({formatDate(data?.data_referencia)}), pela data de início de atividade.
         A base pública da Receita é publicada por competência, com defasagem. Situação cadastral ativa não comprova regularidade fiscal.
@@ -191,9 +200,8 @@ function BarList({ title, items, keepOrder }: { title: string; items: ChartItem[
     <Card>
       <CardHeader>
         <CardTitle>{title}</CardTitle>
-        {list.length === 0 && <CardDescription>Sem dados na competência atual.</CardDescription>}
       </CardHeader>
-      {list.length > 0 && (
+      {list.length > 0 ? (
         <CardContent className="space-y-1.5">
           {list.map((i) => (
             <div key={i.label ?? 'nd'} className="grid grid-cols-[minmax(0,10rem)_1fr_auto] items-center gap-3 text-xs">
@@ -204,6 +212,10 @@ function BarList({ title, items, keepOrder }: { title: string; items: ChartItem[
               <span className="w-14 text-right tabular-nums text-muted-foreground">{nf.format(i.total)}</span>
             </div>
           ))}
+        </CardContent>
+      ) : (
+        <CardContent className="pt-0">
+          <EmptyState icon={BarChart3} title="Sem dados na competência atual" />
         </CardContent>
       )}
     </Card>
