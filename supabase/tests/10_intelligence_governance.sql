@@ -1,0 +1,24 @@
+\set ON_ERROR_STOP 1
+begin;
+create function pg_temp.gov_assert(ok boolean,label text) returns void language plpgsql as $$begin if ok is not true then raise exception 'FALHA Governanca: %',label;end if;raise notice 'ok Governanca: %',label;end $$;
+create function pg_temp.gov_denied(command text) returns void language plpgsql as $$begin begin execute command;exception when others then return;end;raise exception 'Deveria negar';end $$;
+set local role authenticated;
+select set_config('request.jwt.claim.sub','11111111-1111-1111-1111-111111111111',true);
+select pg_temp.gov_assert(company_opportunity_signals((select id from leads where cnpj_basico='12ABC345')) ? 'methodology','sinais tem ressalvas');
+select pg_temp.gov_assert(company_relationship_graph((select id from leads where cnpj_basico='12ABC345')) ? 'establishments','grafo usa estabelecimentos reais');
+select pg_temp.gov_assert(commercial_learning(current_date-365,current_date) ? 'segments','aprendizado com amostra');
+select pg_temp.gov_assert((security_overview()->>'tables_without_rls')::int=0,'novas tabelas com RLS');
+select set_config('app.governance',record_governance_request('oposicao','GOV00001','Pedido registrado em teste')::text,true);
+select pg_temp.gov_assert(exists(select 1 from contact_suppressions where cnpj_basico='GOV00001'),'oposicao aplica bloqueio');
+select resolve_governance_request(current_setting('app.governance')::uuid,'concluida','Bloqueio aplicado e registrado');
+select pg_temp.gov_assert((select status='concluida' from governance_requests where id=current_setting('app.governance')::uuid),'resolucao rastreavel');
+select save_governance_policy('retention','Politica teste sujeita a revisao juridica');
+select set_config('request.jwt.claim.sub','33333333-3333-3333-3333-333333333333',true);
+select pg_temp.gov_denied($$select security_overview()$$);
+select pg_temp.gov_denied($$select commercial_learning(current_date-30,current_date)$$);
+select pg_temp.gov_denied($$select record_governance_request('exclusao','GOV00001','forjado')$$);
+select set_config('request.jwt.claim.sub','22222222-2222-2222-2222-222222222222',true);
+select pg_temp.gov_denied($$select company_relationship_graph((select id from leads limit 1))$$);
+reset role;
+select pg_temp.gov_assert(not has_function_privilege('anon','public.security_overview()','execute'),'governanca nao anonima');
+rollback;

@@ -16,9 +16,9 @@ from .netguard import BlockedURL, SafeFetcher
 
 PARKED = re.compile(
     r"domain (is )?for sale|this domain (is|may be) for sale|dom[ií]nio (est[aá] )?(à|a) venda|parked( free)?|"
-    r"comprar este dom[ií]nio|hostgator|em constru[cç][aã]o|under construction|coming soon|index of /|"
+    r"comprar este dom[ií]nio|em constru[cç][aã]o|under construction|coming soon|index of /|"
     r"default web site page|it works!|welcome to nginx|apache2 ubuntu default|site em manuten[cç][aã]o|"
-    r"registro\.br.*dispon[ií]vel|godaddy", re.I)
+    r"registro\.br.*dispon[ií]vel", re.I)
 SOCIAL = {
     "instagram": re.compile(r"https?://(?:www\.)?instagram\.com/([A-Za-z0-9_.]{2,30})/?", re.I),
     "facebook": re.compile(r"https?://(?:www\.|m\.)?(?:facebook|fb)\.com/(?!sharer|share|dialog|plugins|tr\b)([A-Za-z0-9_.\-/]{2,80})", re.I),
@@ -196,6 +196,22 @@ def audit_site(fetcher: SafeFetcher, url: str, *, check_links: int = 8, today: d
     out["checks"]["contato"] = contato
     if not (tel or mail or phones_txt or emails_txt or contato["whatsapp"] or p.has_form):
         _issue(issues, "sem_contato", "alta", "nenhum telefone, e-mail, WhatsApp ou formulário de contato na página inicial")
+
+    # Recursos comerciais observados na página/linkagem, sem inferir inexistência no restante do site.
+    business_patterns = {
+        'catalogo': re.compile(r'cat[aá]logo|portfolio|portf[oó]lio', re.I),
+        'loja': re.compile(r'/loja|/shop|/cart|/carrinho|/checkout|/produtos', re.I),
+        'agendamento': re.compile(r'agenda|appointment|booking|calendly|cal\.com', re.I),
+        'institucional': re.compile(r'sobre|quem-somos|about|institucional', re.I),
+        'servicos': re.compile(r'servi[cç]os|services', re.I),
+    }
+    out['checks']['recursos_comerciais'] = {
+        code: {'observado': bool(found := [u for u in links if pattern.search(u)]), 'evidencias': found[:8],
+               'escopo': 'links publicados na página analisada; não prova ausência no site inteiro'}
+        for code, pattern in business_patterns.items()
+    }
+    out['checks']['acessibilidade_basica'] = {'imagens': p.imgs, 'imagens_sem_alt': p.imgs_no_alt,
+        'limitacao': 'Somente atributos alt da página; não equivale a auditoria WCAG completa.'}
 
     # desatualizado (rodapé com ano antigo)
     years = [int(y) for y in YEAR.findall(html[-60000:] or "")]

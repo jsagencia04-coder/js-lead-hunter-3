@@ -15,6 +15,8 @@ export interface OpportunityRow {
   stage_changed_at: string; source: string; created_at: string; cnpj: string; cnpj_basico: string; score: number
   priority: 'alta' | 'media' | 'baixa'; razao_social: string | null; nome_fantasia: string | null; uf: string | null
   municipio: string | null; has_phone: boolean; has_email: boolean; next_follow_up_at: string | null; tarefas_abertas: number
+  pipeline_id: string; pipeline_name: string; team_id: string | null; team_name: string | null
+  probability: number; weighted_value: number; priority_level: string
 }
 
 export interface Task {
@@ -42,6 +44,7 @@ export interface Service {
   id: string; code: string; name: string; description: string | null; active: boolean; sort_order: number
   price_from: number | null; price_to: number | null; package: string | null; recurrence: string
   payment_terms: string | null; deliverables: string | null
+  item_type: string; category: string | null; unit_cost: number | null; delivery_days: number | null
 }
 
 export const TASK_KIND: Record<string, string> = {

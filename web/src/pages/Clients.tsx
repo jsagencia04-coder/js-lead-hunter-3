@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Alert } from '@/components/ui/alert'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table'
+import { CustomerSuccess } from '@/components/CustomerSuccess'
 
 interface Row {
   id: string; lead_id: string; title: string; total_value: number | null; recurring_value: number | null; recurrence: string
@@ -24,6 +25,7 @@ const monthly = (r: Row) => {
 export default function Clients() {
   const openLead = useOpenLead()
   const [status, setStatus] = useState('ativo')
+  const [selectedContract,setSelectedContract]=useState('')
   const [rows, setRows] = useState<Row[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -63,6 +65,8 @@ export default function Clients() {
           <Card key={k}><CardHeader><CardDescription>{k}</CardDescription><CardTitle className="text-xl">{v}</CardTitle></CardHeader></Card>
         ))}
       </div>
+      <div className="mb-4 space-y-3"><Select aria-label="Contrato para pós-venda" value={selectedContract} onChange={e=>setSelectedContract(e.target.value)}><option value="">Selecionar contrato para acompanhamento</option>{rows.map(r=><option key={r.id} value={r.id}>{r.leads.establishments.nome_fantasia||r.leads.companies.razao_social} · {r.title}</option>)}</Select>{selectedContract&&<CustomerSuccess key={selectedContract} contractId={selectedContract}/>}</div>
+      <p className="mb-3 text-xs text-muted-foreground">Indicadores desta lista consideram até 500 contratos carregados com os filtros atuais.</p>
       <Card>
         <Table>
           <THead><tr><TH>Cliente</TH><TH>Contrato</TH><TH>Valor</TH><TH>Recorrente</TH><TH>Situação</TH><TH>Assinatura</TH><TH>Vigência</TH></tr></THead>

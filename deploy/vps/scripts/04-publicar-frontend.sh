@@ -19,7 +19,7 @@ mkdir -p "$REL"
 log "Testando e compilando o frontend (Node 22 em container)"
 docker run --rm -v "$APP_DIR/web:/web" -w /web \
   -e VITE_SUPABASE_URL="https://$API_DOMAIN" -e VITE_SUPABASE_ANON_KEY="$ANON_KEY" \
-  node:22-alpine sh -c "npm ci --no-audit --no-fund && npm test && npm run build"
+  node:22-alpine sh -c "npm ci --no-audit --no-fund && npm run lint && npm test && npm run build"
 
 cp -a "$APP_DIR/web/dist/." "$REL/"
 # Preserva chunks já referenciados por abas abertas antes da atualização (rotas lazy).

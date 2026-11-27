@@ -27,6 +27,7 @@ export default function Services() {
   const [rules, setRules] = useState<DigitalRule[]>([])
   const [error, setError] = useState<string | null>(null)
   const [ok, setOk] = useState<string | null>(null)
+  const [newCode,setNewCode]=useState(''),[newName,setNewName]=useState(''),[newType,setNewType]=useState('servico')
 
   const load = useCallback(async () => {
     const [s, r] = await Promise.all([
@@ -48,6 +49,7 @@ export default function Services() {
       const { error } = await supabase.from('service_catalog').update({
         name: s.name, description: s.description, active: s.active, price_from: s.price_from, price_to: s.price_to,
         package: s.package, recurrence: s.recurrence, payment_terms: s.payment_terms, deliverables: s.deliverables,
+        item_type:s.item_type,category:s.category,unit_cost:s.unit_cost,delivery_days:s.delivery_days,
       }).eq('id', s.id)
       if (error) return setError(error.message)
     }
@@ -64,6 +66,7 @@ export default function Services() {
         actions={isAdmin ? <Button onClick={save}><Save className="h-4 w-4" /> Salvar</Button> : undefined} />
       {error && <Alert tone="error" className="mb-4">{error}</Alert>}
       {ok && <Alert tone="info" className="mb-4">{ok}</Alert>}
+      {isAdmin&&<form className="mb-4 flex flex-wrap gap-2" onSubmit={async e=>{e.preventDefault();setError(null);const r=await supabase.rpc('create_catalog_item',{p_code:newCode,p_name:newName,p_type:newType,p_description:'',p_price:null,p_cost:null,p_category:null,p_days:null});if(r.error)setError(r.error.message);else{setNewCode('');setNewName('');load()}}}><Input required aria-label="Código do novo item" placeholder="codigo_unico" value={newCode} onChange={e=>setNewCode(e.target.value)} className="w-44"/><Input required aria-label="Nome do novo item" placeholder="Novo produto/serviço" value={newName} onChange={e=>setNewName(e.target.value)} className="w-64"/><Select aria-label="Tipo do novo item" className="w-36" value={newType} onChange={e=>setNewType(e.target.value)}>{['servico','produto','pacote'].map(x=><option key={x}>{x}</option>)}</Select><Button type="submit">Cadastrar item</Button></form>}
       <Card className="mb-6">
         <Table>
           <THead><tr><TH>Serviço</TH><TH>Preço de</TH><TH>Preço até</TH><TH>Recorrência</TH><TH>Pacote / entregáveis</TH><TH>Pagamento</TH><TH>Ativo</TH></tr></THead>
@@ -73,6 +76,8 @@ export default function Services() {
                 <TD className="min-w-[14rem]">
                   {isAdmin ? <Input value={s.name} onChange={(e) => set(s.id, { name: e.target.value })} /> : <p className="font-medium">{s.name}</p>}
                   <p className="mt-1 text-xs text-muted-foreground">{s.description}</p>
+                  {isAdmin&&<div className="mt-2 space-y-1"><Input aria-label={`Categoria ${s.name}`} value={s.category??''} placeholder="Categoria" onChange={e=>set(s.id,{category:e.target.value||null})}/><label className="text-xs">Custo unitário<Input type="number" min={0} step="0.01" value={s.unit_cost??''} onChange={e=>set(s.id,{unit_cost:e.target.value===''?null:Number(e.target.value)})}/></label><label className="text-xs">Prazo em dias<Input type="number" min={0} value={s.delivery_days??''} onChange={e=>set(s.id,{delivery_days:e.target.value===''?null:Number(e.target.value)})}/></label></div>}
+                  {s.unit_cost!=null&&s.price_from!=null&&s.price_from>0&&<p className="text-xs text-muted-foreground">Margem bruta de referência: {(((s.price_from-s.unit_cost)/s.price_from)*100).toFixed(1)}% (sem impostos/despesas adicionais)</p>}
                 </TD>
                 <TD>{isAdmin ? <Input className="w-28" inputMode="decimal" defaultValue={s.price_from ?? ''} onBlur={(e) => set(s.id, { price_from: num(e.target.value) })} />
                   : s.price_from != null ? brl.format(s.price_from) : '—'}</TD>

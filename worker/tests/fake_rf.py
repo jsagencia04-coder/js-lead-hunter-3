@@ -109,9 +109,18 @@ class _Handler(BaseHTTPRequestHandler):
     def _auth(self) -> bool:
         expected = "Basic " + base64.b64encode(f"{TOKEN}:".encode()).decode()
         if self.headers.get("Authorization") != expected:
+            # Consome o corpo antes de fechar: no Windows o socket com dados pendentes
+            # pode ser resetado e ocultar o HTTP 401, tornando o teste intermitente.
+            length = int(self.headers.get('Content-Length') or 0)
+            if length:
+                self.rfile.read(length)
             self.send_response(401)
             self.send_header("WWW-Authenticate", 'Basic realm="share"')
+            self.send_header('Content-Length', '0')
+            self.send_header('Connection', 'close')
             self.end_headers()
+            self.wfile.flush()
+            self.close_connection = True
             return False
         return True
 

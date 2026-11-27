@@ -71,7 +71,7 @@ export function ProposalsSection({ leadId, opportunityId, canEdit, userId, onCha
   const [busy, setBusy] = useState(false)
   const [title, setTitle] = useState('')
   const [amount, setAmount] = useState('')
-  const [status, setStatus] = useState('enviada')
+  const [status, setStatus] = useState('rascunho')
   const [validUntil, setValidUntil] = useState('')
   const [notes, setNotes] = useState('')
   const [scope, setScope] = useState('')

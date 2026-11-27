@@ -10,6 +10,7 @@ import { Select } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Alert } from '@/components/ui/alert'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ActivityCalendar } from '@/components/ActivityCalendar'
 
 type Row = Task & { empresa: string | null }
 
@@ -19,6 +20,8 @@ export default function Agenda() {
   const canEdit = hasRole('admin', 'gestor', 'comercial')
   const [scope, setScope] = useState<'meus' | 'equipe'>('meus')
   const [kind, setKind] = useState('')
+  const [calendar,setCalendar]=useState(false)
+  const [recurrences,setRecurrences]=useState<{id:string;title:string;interval_days:number;next_due_at:string;paused:boolean;owner_id:string}[]>([])
   const [rows, setRows] = useState<Row[]>([])
   const [done, setDone] = useState<Row[]>([])
   const [owners, setOwners] = useState<Record<string, string>>({})
@@ -26,7 +29,9 @@ export default function Agenda() {
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
-    setLoading(true)
+    setLoading(true); setError(null)
+    const rr=await supabase.from('recurring_task_rules').select('id,title,interval_days,next_due_at,paused,owner_id').order('next_due_at').limit(100)
+    if(rr.error)setError(rr.error.message);setRecurrences(rr.data??[])
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const base = (q: any) => {
       if (scope === 'meus') q = q.eq('owner_id', profile!.id)
@@ -72,7 +77,7 @@ export default function Agenda() {
       <span>{t.title}</span>
       <span className="text-xs text-muted-foreground">{t.due_at ? formatDateTime(t.due_at) : ''}{scope === 'equipe' && t.owner_id ? ` · ${owners[t.owner_id] ?? ''}` : ''}</span>
       {t.done_at ? <span className="ml-auto text-xs text-muted-foreground">concluída {formatDateTime(t.done_at)}{t.outcome ? ` — ${t.outcome}` : ''}</span>
-        : canEdit && <Button size="sm" variant="outline" className="ml-auto" onClick={() => complete(t)}><CheckCircle2 className="h-4 w-4" /> Concluir</Button>}
+        : canEdit && <><Button size="sm" variant="outline" className="ml-auto" onClick={() => complete(t)}><CheckCircle2 className="h-4 w-4" /> Concluir</Button>{t.due_at&&t.owner_id&&<Button size="sm" variant="ghost" onClick={async()=>{const answer=window.prompt('Repetir a cada quantos dias? (1 a 365)');if(answer===null)return;const days=Number(answer);if(!Number.isInteger(days)||days<1||days>365){setError('Intervalo inválido');return}const r=await supabase.rpc('create_task_recurrence',{p_task:t.id,p_days:days});if(r.error)setError(r.error.message);else load()}}>Repetir</Button>}</>}
     </div>
   )
 
@@ -80,6 +85,7 @@ export default function Agenda() {
     <>
       <PageHeader title="Agenda e tarefas" description="Ligações, reuniões, e-mails, WhatsApp, visitas e follow-ups. Para criar, abra a ficha da empresa."
         actions={<>
+          <Button variant="outline" onClick={()=>setCalendar(!calendar)}>{calendar?'Lista':'Calendário'}</Button>
           <Select value={scope} onChange={(e) => setScope(e.target.value as 'meus' | 'equipe')} className="w-40" aria-label="Escopo">
             <option value="meus">Minhas tarefas</option><option value="equipe">Toda a equipe</option>
           </Select>
@@ -90,6 +96,8 @@ export default function Agenda() {
           <Button variant="outline" onClick={load} disabled={loading}>{loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}</Button>
         </>} />
       {error && <Alert tone="error" className="mb-4">{error}</Alert>}
+      <p className="mb-3 text-xs text-muted-foreground">Lista limitada a 300 atividades abertas e 30 concluídas mais recentes. Ajuste responsável/tipo para reduzir a consulta.</p>
+      {calendar&&<div className="mb-4"><ActivityCalendar activities={[...rows,...done].map(t=>({id:t.id,title:t.title,when:t.due_at,company:t.empresa,done:!!t.done_at,onOpen:()=>openLead(t.lead_id)}))}/></div>}
       <div className="grid gap-4 lg:grid-cols-2">
         {groups.map(([title, list, tone]) => (
           <Card key={title}>
@@ -100,6 +108,7 @@ export default function Agenda() {
           </Card>
         ))}
       </div>
+      <Card className="mt-4"><CardHeader><CardTitle>Recorrências (últimas 100)</CardTitle></CardHeader><CardContent className="space-y-2">{!recurrences.length&&<p className="text-sm text-muted-foreground">Nenhuma regra recorrente registrada.</p>}{recurrences.map(r=><div className="rounded border p-2 text-sm" key={r.id}>{r.title} · a cada {r.interval_days} dias · próxima {formatDateTime(r.next_due_at)} · {r.paused?'pausada':'ativa'}{canEdit&&(r.owner_id===profile?.id||hasRole('admin','gestor'))&&<Button size="sm" variant="outline" className="ml-2" onClick={async()=>{const x=await supabase.rpc('pause_task_recurrence',{p_id:r.id,p_paused:!r.paused});if(x.error)setError(x.error.message);else load()}}>{r.paused?'Retomar':'Pausar'}</Button>}</div>)}</CardContent></Card>
       <Card className="mt-4">
         <CardHeader><CardTitle>Concluídas recentemente</CardTitle></CardHeader>
         <CardContent className="space-y-2">{done.length === 0 ? <p className="text-sm text-muted-foreground">Nenhuma.</p> : done.map((t) => item(t))}</CardContent>

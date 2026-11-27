@@ -17,7 +17,7 @@ import { Alert } from '@/components/ui/alert'
 interface Opp {
   id: string; title: string; stage_code: string; status: string; value: number | null; recurring_value: number | null
   owner_id: string | null; expected_close: string | null; lost_reason: string | null; lost_reason_id: string | null
-  won_at: string | null; created_at: string; source: string
+  won_at: string | null; created_at: string; source: string; pipeline_id:string;team_id:string|null;probability_override:number|null;priority_level:string
 }
 
 function useErr() {
@@ -34,6 +34,10 @@ export function OpportunitiesSection({ leadId, canEdit, suppressed, userId, owne
   const [opps, setOpps] = useState<Opp[]>([])
   const [stages, setStages] = useState<PipelineStage[]>([])
   const [reasons, setReasons] = useState<LossReason[]>([])
+  const [pipelines,setPipelines]=useState<{id:string;name:string}[]>([])
+  const [pipelineMembers,setPipelineMembers]=useState<{pipeline_id:string;stage_code:string}[]>([])
+  const [teams,setTeams]=useState<{id:string;name:string}[]>([])
+  const [newPipeline,setNewPipeline]=useState('00000000-0000-4000-8000-000000000001')
   const [title, setTitle] = useState('')
   const [value, setValue] = useState('')
   const [losing, setLosing] = useState<{ id: string; reason_id: string; text: string } | null>(null)
@@ -52,6 +56,11 @@ export function OpportunitiesSection({ leadId, canEdit, suppressed, userId, owne
     onOpenOpp?.(((o.data as Opp[]) ?? []).find((x) => x.status === 'aberta')?.id ?? null)
   }, [leadId]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { load() }, [load])
+  useEffect(()=>{
+    supabase.from('sales_pipelines').select('id,name').eq('active',true).order('name').then(({data})=>setPipelines(data??[]))
+    supabase.from('pipeline_stage_members').select('pipeline_id,stage_code').then(({data})=>setPipelineMembers(data??[]))
+    supabase.from('sales_teams').select('id,name').eq('active',true).order('name').then(({data})=>setTeams(data??[]))
+  },[])
 
   const done = async (p: PromiseLike<{ error: { message: string } | null }>) => {
     e.setError(null)
@@ -64,7 +73,8 @@ export function OpportunitiesSection({ leadId, canEdit, suppressed, userId, owne
   async function create(ev: FormEvent) {
     ev.preventDefault()
     if (!title.trim()) return
-    if (await done(supabase.from('opportunities').insert({ lead_id: leadId, title: title.trim(), value: parseMoney(value), created_by: userId }))) {
+    if (await done(supabase.from('opportunities').insert({ lead_id: leadId, title: title.trim(), pipeline_id:newPipeline,
+      stage_code:stages.find(s=>s.kind==='aberta'&&pipelineMembers.some(m=>m.pipeline_id===newPipeline&&m.stage_code===s.code))?.code??'novo_lead',value: parseMoney(value), created_by: userId }))) {
       setTitle(''); setValue('')
     }
   }
@@ -91,7 +101,7 @@ export function OpportunitiesSection({ leadId, canEdit, suppressed, userId, owne
             </div>
             {canEdit && o.status === 'aberta' ? (
               <Select value={o.stage_code} onChange={(ev) => move(o, ev.target.value)} className="w-48" aria-label="Etapa">
-                {stages.map((s) => <option key={s.code} value={s.code}>{s.label}</option>)}
+                {stages.filter(s=>pipelineMembers.some(m=>m.pipeline_id===o.pipeline_id&&m.stage_code===s.code)).map((s) => <option key={s.code} value={s.code}>{s.label}</option>)}
               </Select>
             ) : (
               <div className="flex items-center gap-2">
@@ -119,6 +129,7 @@ export function OpportunitiesSection({ leadId, canEdit, suppressed, userId, owne
                 onBlur={(ev) => { if ((ev.target.value || null) !== o.expected_close) done(supabase.from('opportunities').update({ expected_close: ev.target.value || null }).eq('id', o.id)) }} />
             </div>
           )}
+          {canEdit&&o.status==='aberta'&&<div className="mt-2 grid gap-2 md:grid-cols-3"><Select aria-label="Equipe da oportunidade" value={o.team_id??''} onChange={e=>done(supabase.from('opportunities').update({team_id:e.target.value||null}).eq('id',o.id))}><option value="">Sem equipe</option>{teams.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</Select><Select aria-label="Prioridade da oportunidade" value={o.priority_level} onChange={e=>done(supabase.from('opportunities').update({priority_level:e.target.value}).eq('id',o.id))}>{['baixa','normal','alta','urgente'].map(x=><option key={x}>{x}</option>)}</Select><label className="text-xs">Probabilidade configurada (não comprovada)<Input type="number" min={0} max={100} defaultValue={o.probability_override??''} placeholder="Usar etapa" onBlur={e=>{const p=e.target.value===''?null:Number(e.target.value);if(p!==o.probability_override)done(supabase.from('opportunities').update({probability_override:p}).eq('id',o.id))}}/></label></div>}
           {losing?.id === o.id && (
             <div className="mt-2 grid gap-2 rounded-md bg-red-50 p-2 md:grid-cols-[1fr_1fr_auto_auto]">
               <Select value={losing.reason_id} onChange={(ev) => setLosing({ ...losing, reason_id: ev.target.value })} aria-label="Motivo da perda">
@@ -138,6 +149,7 @@ export function OpportunitiesSection({ leadId, canEdit, suppressed, userId, owne
       ))}
       {canEdit && !suppressed && (
         <form onSubmit={create} className="flex flex-col gap-2 border-t pt-2 md:flex-row">
+          <Select aria-label="Funil da nova oportunidade" value={newPipeline} onChange={e=>setNewPipeline(e.target.value)}>{pipelines.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</Select>
           <Input value={title} onChange={(ev) => setTitle(ev.target.value)} placeholder="Nova oportunidade (ex.: Site institucional)" />
           <Input value={value} onChange={(ev) => setValue(ev.target.value)} placeholder="Valor (R$)" className="md:w-36" inputMode="decimal" />
           <Button type="submit" disabled={!title.trim()}><Plus className="h-4 w-4" /> Adicionar ao funil</Button>
@@ -357,6 +369,8 @@ export function ChannelsSection({ leadId, canEdit, canReset }: { leadId: string;
                           {r.result.problemas.map((pb, i) => <p key={i}>• [{pb.gravidade}] {pb.evidencia}</p>)}
                         </div>
                       )}
+                      {r.result?.checks&&<details className="mt-2"><summary className="cursor-pointer">Verificações técnicas registradas</summary><pre className="whitespace-pre-wrap break-all">{JSON.stringify(r.result.checks,null,2)}</pre></details>}
+                      {r.result&&p==='site'&&<Button size="sm" variant="outline" onClick={async()=>{const {createTextPdf}=await import('@/lib/pdf');createTextPdf('Auditoria técnica observada',[{heading:'Origem',text:`${r.url??'URL não registrada'} · fonte ${r.source??'não informada'} · ${formatDateTime(r.last_checked_at)}`},{heading:'Resultado',text:`Estado ${r.status} · nota ${r.result.nota??'não aferida'}/100. Verificações passivas, não teste invasivo.`},{heading:'Problemas observados',text:(r.result.problemas??[]).map(x=>`[${x.gravidade}] ${x.evidencia}`).join('\n')},{heading:'Verificações e limites',text:JSON.stringify(r.result.checks??{},null,2)}]).save('auditoria-site.pdf')}}>Baixar relatório de auditoria PDF</Button>}
                       {r.candidates?.length > 0 && <p className="pt-1 text-muted-foreground">Candidatos avaliados: {r.candidates.map((c) => `${c.nome ?? c.titulo ?? c.url} (${c.confianca ?? 0}%)`).join('; ')}</p>}
                       <p className="text-muted-foreground">Fonte: {r.source ?? '—'} · primeira verificação {formatDateTime(r.first_checked_at)} · última {formatDateTime(r.last_checked_at)} · próxima {formatDateTime(r.next_check_at)}</p>
                     </>

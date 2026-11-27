@@ -35,6 +35,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: 'Inteligência',
     items: [
       { to: '/', label: 'Visão geral', icon: LayoutDashboard },
+      { to: '/executivo', label: 'Painel executivo V4', icon: BarChart3 },
       { to: '/leads', label: 'Base de empresas', icon: Building2 },
       { to: '/mapa', label: 'Mapa de oportunidades', icon: Map },
       { to: '/mercado', label: 'Inteligência territorial', icon: BarChart3 },
@@ -59,7 +60,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     id: 'ia',
     label: 'Inteligência assistida',
-    items: [{ to: '/assistente', label: 'Assistente comercial', icon: Search }, { to: '/agentes', label: 'Central de agentes', icon: Target }],
+    items: [{ to: '/assistente', label: 'Assistente comercial', icon: Search }, { to: '/agentes', label: 'Central de agentes', icon: Target },{to:'/aprendizado',label:'Aprendizado comercial',icon:BarChart3,roles:['admin','gestor']}],
   },
   {
     id: 'gestao',
@@ -68,8 +69,12 @@ const NAV_GROUPS: NavGroup[] = [
       { to: '/relatorios', label: 'Relatórios', icon: BarChart3 },
       { to: '/receita', label: 'Inteligência de receita', icon: BarChart3 },
       { to: '/segmentos', label: 'Segmentos e ICP', icon: Target },
+      { to: '/configuracao-comercial', label: 'Funis e equipes', icon: KanbanSquare, roles: ['admin','gestor'] },
+      { to: '/modelos-proposta', label: 'Modelos de proposta', icon: FileText, roles: ['admin','gestor'] },
       { to: '/automacoes', label: 'Automações e alertas', icon: CalendarCheck },
       { to: '/importacao', label: 'Central de importação', icon: DatabaseZap, roles: ['admin', 'gestor'] },
+      { to: '/consumo', label: 'Consumo e integrações', icon: DatabaseZap, roles: ['admin','gestor'] },
+      { to: '/seguranca', label: 'Segurança e governança', icon: ShieldCheck, roles: ['admin','gestor'] },
       { to: '/admin', label: 'Administração', icon: ShieldCheck, roles: ['admin'] },
     ],
   },

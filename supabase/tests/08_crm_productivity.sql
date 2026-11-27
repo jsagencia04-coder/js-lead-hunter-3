@@ -1,0 +1,40 @@
+\set ON_ERROR_STOP 1
+begin;
+create function pg_temp.crm_assert(ok boolean,label text) returns void language plpgsql as $$begin if ok is not true then raise exception 'FALHA CRM: %',label;end if;raise notice 'ok CRM: %',label;end $$;
+create function pg_temp.crm_denied(command text) returns void language plpgsql as $$begin begin execute command;exception when others then return;end;raise exception 'Deveria negar';end $$;
+set local role authenticated;
+select set_config('request.jwt.claim.sub','11111111-1111-1111-1111-111111111111',true);
+select set_config('app.crm_pipeline',configure_sales_pipeline('Funil sintetico',array['novo_lead','qualificado','contrato_fechado','perdido'])::text,true);
+select set_config('app.crm_team',configure_sales_team('Equipe sintetica',array[auth.uid()])::text,true);
+insert into opportunities(lead_id,title,pipeline_id,team_id,value,stage_code,created_by)
+select id,'Oportunidade multifunil',current_setting('app.crm_pipeline')::uuid,current_setting('app.crm_team')::uuid,1000,'novo_lead',auth.uid() from leads where cnpj_basico='12ABC345';
+select pg_temp.crm_assert(exists(select 1 from opportunity_list_v where title='Oportunidade multifunil' and weighted_value=50),'valor ponderado usa probabilidade configurada');
+select pg_temp.crm_assert((select total=1 from pipeline_counts_v4(current_setting('app.crm_pipeline')::uuid,current_setting('app.crm_team')::uuid,null,false,null)),'contador filtra funil e equipe');
+select pg_temp.crm_denied($$update opportunities set stage_code='em_negociacao' where title='Oportunidade multifunil'$$);
+select pg_temp.crm_denied($$select configure_sales_pipeline('Funil sintetico',array['qualificado','contrato_fechado'],current_setting('app.crm_pipeline')::uuid,true)$$);
+update opportunities set stage_code='contrato_fechado' where title='Oportunidade multifunil';
+select pg_temp.crm_assert(exists(select 1 from opportunities where title='Oportunidade multifunil' and status='ganha'),'etapa terminal mantém integracao legado');
+insert into crm_tasks(lead_id,owner_id,kind,title,due_at,created_by)
+select id,auth.uid(),'tarefa','Atividade recorrente teste',now()-interval '2 days',auth.uid() from leads where cnpj_basico='12ABC345';
+select set_config('app.crm_recur',create_task_recurrence((select id from crm_tasks where title='Atividade recorrente teste'),2)::text,true);
+select pg_temp.crm_assert(exists(select 1 from recurring_task_rules where id=current_setting('app.crm_recur')::uuid),'recorrencia real registrada');
+select pg_temp.crm_assert(create_task_recurrence((select id from crm_tasks where title='Atividade recorrente teste'),2)=current_setting('app.crm_recur')::uuid,'duplo clique não duplica regra');
+select pause_task_recurrence(current_setting('app.crm_recur')::uuid,true);
+reset role;
+select set_config('request.jwt.claim.sub','',true);
+select pg_temp.crm_assert(schedule_recurring_tasks()=0,'recorrencia pausada nao cria');
+set local role authenticated;
+select set_config('request.jwt.claim.sub','11111111-1111-1111-1111-111111111111',true);
+select pause_task_recurrence(current_setting('app.crm_recur')::uuid,false);
+reset role;
+select set_config('request.jwt.claim.sub','',true);
+select pg_temp.crm_assert(schedule_recurring_tasks()=1,'worker cria ocorrencia');
+select pg_temp.crm_assert(schedule_recurring_tasks()=0,'ocorrencia nao duplica');
+select pg_temp.crm_assert((select count(*)=1 from crm_tasks where recurring_rule_id=current_setting('app.crm_recur')::uuid),'tarefa vinculada a recorrencia');
+set local role authenticated;
+select set_config('request.jwt.claim.sub','33333333-3333-3333-3333-333333333333',true);
+select pg_temp.crm_denied($$select configure_sales_pipeline('Vendedor',array['novo_lead','perdido'])$$);
+select pg_temp.crm_denied($$select pause_task_recurrence(current_setting('app.crm_recur')::uuid,true)$$);
+reset role;
+select pg_temp.crm_assert(not has_function_privilege('authenticated','public.schedule_recurring_tasks(integer)','execute'),'worker nao acessivel a clientes');
+rollback;

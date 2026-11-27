@@ -4,6 +4,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 const mock=vi.hoisted(()=>({rpc:vi.fn()}))
 vi.mock('react-router-dom',()=>({useParams:()=>({id:'proposal-real'})}))
+vi.mock('@/components/ProposalEditor',()=>({ProposalEditor:()=>null}))
 vi.mock('@/components/layout/AppLayout',()=>({PageHeader:({title,actions}:any)=><><h1>{title}</h1>{actions}</>}))
 vi.mock('@/lib/supabase',()=>({supabase:{rpc:mock.rpc,from:()=>({select:()=>({eq:()=>({order:()=>({limit:async()=>({data:[],error:null})})})})})}}))
 import ProposalDocument from '../src/pages/ProposalDocument'

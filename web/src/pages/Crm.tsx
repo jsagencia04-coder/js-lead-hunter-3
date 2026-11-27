@@ -14,18 +14,25 @@ import { Badge } from '@/components/ui/badge'
 import { Alert } from '@/components/ui/alert'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
+import { ActivityCalendar } from '@/components/ActivityCalendar'
 import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table'
 
 const PER_COLUMN = 30
 const COLS = 'id,lead_id,title,stage_code,stage_label,stage_order,status,owner_id,owner_name,value,recurring_value,expected_close,' +
-  'stage_changed_at,created_at,cnpj,score,priority,razao_social,nome_fantasia,uf,municipio,has_phone,has_email,next_follow_up_at,tarefas_abertas,lost_reason'
+  'stage_changed_at,created_at,cnpj,score,priority,razao_social,nome_fantasia,uf,municipio,has_phone,has_email,next_follow_up_at,tarefas_abertas,lost_reason,' +
+  'pipeline_id,pipeline_name,team_id,team_name,probability,weighted_value,priority_level'
 
 export default function Crm() {
   const { profile, hasRole } = useAuth()
   const openLead = useOpenLead()
   const canEdit = hasRole('admin', 'gestor', 'comercial')
-  const [view, setView] = useState<'kanban' | 'lista'>('kanban')
+  const [view, setView] = useState<'kanban' | 'lista' | 'calendario'>('kanban')
   const [stages, setStages] = useState<PipelineStage[]>([])
+  const [pipelines,setPipelines]=useState<{id:string;name:string;active:boolean}[]>([])
+  const [pipeline,setPipeline]=useState('00000000-0000-4000-8000-000000000001')
+  const [teams,setTeams]=useState<{id:string;name:string}[]>([])
+  const [team,setTeam]=useState('')
+  const [members,setMembers]=useState<{pipeline_id:string;stage_code:string;sort_order:number}[]>([])
   const [reasons, setReasons] = useState<LossReason[]>([])
   const [owner, setOwner] = useState('todos')
   const [uf, setUf] = useState('')
@@ -41,12 +48,16 @@ export default function Crm() {
   const [losing, setLosing] = useState<{ id: string; from: string; reason: string; text: string } | null>(null)
 
   useEffect(() => {
+    supabase.from('sales_pipelines').select('id,name,active').order('name').then(({data})=>setPipelines(data??[]))
+    supabase.from('sales_teams').select('id,name').eq('active',true).order('name').then(({data})=>setTeams(data??[]))
+    supabase.from('pipeline_stage_members').select('*').then(({data})=>setMembers(data??[]))
     supabase.from('profiles').select('id,full_name,email').eq('active', true).order('full_name').then(({ data }) => setOwners(data ?? []))
     supabase.from('pipeline_stages').select('*').eq('active', true).order('sort_order').then(({ data }) => setStages((data as PipelineStage[]) ?? []))
     supabase.from('loss_reasons').select('*').eq('active', true).order('sort_order').then(({ data }) => setReasons((data as LossReason[]) ?? []))
   }, [])
 
-  const visible = stages.filter((s) => !onlyOpen || s.kind !== 'perdida')
+  const pipelineStages = stages.filter(s=>!pipeline||members.some(m=>m.pipeline_id===pipeline&&m.stage_code===s.code))
+  const visible = pipelineStages.filter((s) => !onlyOpen || s.kind !== 'perdida')
 
   const load = useCallback(async () => {
     if (!stages.length) return
@@ -58,9 +69,11 @@ export default function Crm() {
       if (ownerId) q = q.eq('owner_id', ownerId)
       if (owner === 'sem') q = q.is('owner_id', null)
       if (uf) q = q.eq('uf', uf)
+      if (pipeline) q=q.eq('pipeline_id',pipeline)
+      if (team) q=q.eq('team_id',team)
       return q
     }
-    const c = await supabase.rpc('pipeline_counts', { p_owner: ownerId, p_unassigned: owner === 'sem', p_uf: uf || null })
+    const c = await supabase.rpc('pipeline_counts_v4', { p_pipeline:pipeline||null,p_team:team||null,p_owner: ownerId, p_unassigned: owner === 'sem', p_uf: uf || null })
     if (c.error) setError(c.error.message)
     setCounts(Object.fromEntries(((c.data as { stage_code: string; total: number; valor: number }[]) ?? []).map((r) => [r.stage_code, { total: r.total, valor: r.valor }])))
     if (view === 'kanban') {
@@ -78,7 +91,7 @@ export default function Crm() {
       setList((data as unknown as OpportunityRow[]) ?? [])
     }
     setLoading(false)
-  }, [owner, uf, limits, profile, stages, view, onlyOpen]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [owner, uf, pipeline,team,members,limits, profile, stages, view, onlyOpen]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { load() }, [load])
 
@@ -150,7 +163,10 @@ export default function Crm() {
             <div className="flex rounded-md border">
               <Button variant={view === 'kanban' ? 'default' : 'ghost'} size="sm" onClick={() => setView('kanban')}><Columns3 className="h-4 w-4" /> Kanban</Button>
               <Button variant={view === 'lista' ? 'default' : 'ghost'} size="sm" onClick={() => setView('lista')}><List className="h-4 w-4" /> Tabela</Button>
+              <Button variant={view==='calendario'?'default':'ghost'} size="sm" onClick={()=>setView('calendario')}>Calendário</Button>
             </div>
+            <Select aria-label="Funil comercial" className="w-48" value={pipeline} onChange={e=>setPipeline(e.target.value)}>{pipelines.map(p=><option key={p.id} value={p.id}>{p.name}{!p.active?' (inativo)':''}</option>)}</Select>
+            <Select aria-label="Equipe comercial" className="w-44" value={team} onChange={e=>setTeam(e.target.value)}><option value="">Todas as equipes</option>{teams.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</Select>
             <Select value={owner} onChange={(e) => setOwner(e.target.value)} className="w-48" aria-label="Responsável">
               <option value="todos">Todos os responsáveis</option>
               <option value="meus">Minhas oportunidades</option>
@@ -188,7 +204,7 @@ export default function Crm() {
         </Alert>
       )}
 
-      {view === 'kanban' ? (
+      {view==='calendario'?<ActivityCalendar activities={list.map(o=>({id:o.id,title:o.title,company:o.nome_fantasia||o.razao_social,when:o.expected_close?o.expected_close+'T12:00:00':null,onOpen:()=>openLead(o.lead_id)}))}/>:view === 'kanban' ? (
         <div className="flex gap-3 overflow-x-auto pb-4">
           {visible.map((s) => {
             const cards = columns[s.code] ?? []
@@ -232,12 +248,12 @@ export default function Crm() {
                   <TD>
                     {canEdit && o.status === 'aberta' ? (
                       <Select value={o.stage_code} onClick={(e) => e.stopPropagation()} onChange={(e) => move(o.id, o.stage_code, e.target.value)} aria-label="Etapa">
-                        {stages.map((s) => <option key={s.code} value={s.code}>{s.label}</option>)}
+                        {pipelineStages.map((s) => <option key={s.code} value={s.code}>{s.label}</option>)}
                       </Select>
                     ) : <Badge variant={o.status === 'perdida' ? 'danger' : 'success'}>{o.stage_label}</Badge>}
                   </TD>
                   <TD>{o.owner_name ?? '—'}</TD>
-                  <TD className="tabular-nums">{o.value != null ? brl.format(o.value) : '—'}</TD>
+                  <TD className="tabular-nums">{o.value != null ? brl.format(o.value) : '—'}<p className="text-xs text-muted-foreground">{o.probability}% configurado · ponderado {brl.format(o.weighted_value)}</p></TD>
                   <TD>{formatDate(o.expected_close)}</TD>
                   <TD className="text-xs">{formatDate(o.stage_changed_at)}</TD>
                   <TD><Badge variant={PRIORITY_VARIANT(o.priority)}>{o.score}</Badge></TD>

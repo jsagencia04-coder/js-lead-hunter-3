@@ -38,6 +38,10 @@ MARKERS = {
     "20261127000020": "select to_regprocedure('public.run_operational_agent_job()') is not null",
     "20261127000021": "select to_regprocedure('public.sales_copilot_query(text)') is not null",
     "20261127000022": "select to_regprocedure('public.revenue_summary(date,date)') is not null",
+    "20261127000023": "select to_regprocedure('public.pipeline_counts_v4(uuid,uuid,uuid,boolean,text)') is not null",
+    "20261127000024": "select to_regprocedure('public.save_proposal_document(uuid,text,text,text,text,text,jsonb,text)') is not null",
+    "20261127000025": "select to_regprocedure('public.security_overview()') is not null",
+    "20261127000026": "select to_regprocedure('public.executive_overview_v4(date,date,uuid,text,text)') is not null",
 }
 
 

@@ -1,0 +1,16 @@
+import {useCallback,useEffect,useState,type FormEvent} from 'react'
+import {supabase} from '@/lib/supabase'
+import {PageHeader} from '@/components/layout/AppLayout'
+import {Button} from '@/components/ui/button'
+import {Input} from '@/components/ui/input'
+import {Alert} from '@/components/ui/alert'
+import {Card,CardContent,CardHeader,CardTitle} from '@/components/ui/card'
+interface Template {id:string;name:string;scope:string;payment_terms:string|null;delivery_terms:string|null;active:boolean}
+export default function ProposalTemplates(){
+ const [rows,setRows]=useState<Template[]>([]),[id,setId]=useState<string|null>(null),[name,setName]=useState(''),[scope,setScope]=useState(''),[payment,setPayment]=useState(''),[delivery,setDelivery]=useState(''),[active,setActive]=useState(true),[error,setError]=useState<string|null>(null),[busy,setBusy]=useState(false)
+ const load=useCallback(async()=>{const r=await supabase.from('proposal_templates').select('*').order('name').limit(100);if(r.error)setError(r.error.message);else setRows(r.data??[])},[])
+ useEffect(()=>{load()},[load])
+ function reset(){setId(null);setName('');setScope('');setPayment('');setDelivery('');setActive(true)}
+ async function save(e:FormEvent){e.preventDefault();setBusy(true);setError(null);const r=await supabase.rpc('save_proposal_template',{p_name:name,p_scope:scope,p_payment:payment,p_delivery:delivery,p_id:id,p_active:active});setBusy(false);if(r.error)setError(r.error.message);else{reset();load()}}
+ return <><PageHeader title="Modelos de proposta" description="Textos reutilizáveis, editáveis pela gestão. Aplicar modelo não cria envio nem aceite."/>{error&&<Alert tone="error" className="mb-4">{error}</Alert>}<Card className="mb-4"><CardHeader><CardTitle>{id?'Editar modelo':'Novo modelo'}</CardTitle></CardHeader><CardContent><form onSubmit={save} className="space-y-3"><Input required maxLength={120} aria-label="Nome do modelo" value={name} onChange={e=>setName(e.target.value)} placeholder="Nome"/><label className="text-xs">Escopo<textarea required className="w-full rounded border bg-background p-2" rows={5} value={scope} onChange={e=>setScope(e.target.value)}/></label><Input aria-label="Pagamento do modelo" value={payment} onChange={e=>setPayment(e.target.value)} placeholder="Pagamento"/><Input aria-label="Prazo do modelo" value={delivery} onChange={e=>setDelivery(e.target.value)} placeholder="Prazo"/><label className="flex gap-2 text-sm"><input type="checkbox" checked={active} onChange={e=>setActive(e.target.checked)}/>Ativo</label><Button type="submit" disabled={busy||!name.trim()||!scope.trim()}>Salvar modelo</Button><Button type="button" variant="outline" className="ml-2" onClick={reset}>Limpar</Button></form></CardContent></Card><div className="grid gap-3 md:grid-cols-2">{rows.map(r=><Card key={r.id}><CardHeader><CardTitle>{r.name} · {r.active?'Ativo':'Inativo'}</CardTitle></CardHeader><CardContent><p className="whitespace-pre-wrap text-sm">{r.scope}</p><Button className="mt-3" variant="outline" onClick={()=>{setId(r.id);setName(r.name);setScope(r.scope);setPayment(r.payment_terms??'');setDelivery(r.delivery_terms??'');setActive(r.active)}}>Editar</Button></CardContent></Card>)}</div></>
+}

@@ -30,6 +30,12 @@ const MarketIntelligence = lazy(() => import('@/pages/MarketIntelligence'))
 const SalesCopilot = lazy(() => import('@/pages/SalesCopilot'))
 const RevenueIntelligence = lazy(() => import('@/pages/RevenueIntelligence'))
 const IntelligenceSegments = lazy(() => import('@/pages/IntelligenceSegments'))
+const CommercialConfiguration = lazy(() => import('@/pages/CommercialConfiguration'))
+const CommercialLearning = lazy(() => import('@/pages/CommercialLearning'))
+const SecurityGovernance = lazy(() => import('@/pages/SecurityGovernance'))
+const ExecutiveOverview = lazy(() => import('@/pages/ExecutiveOverview'))
+const OperationalCosts = lazy(() => import('@/pages/OperationalCosts'))
+const ProposalTemplates = lazy(() => import('@/pages/ProposalTemplates'))
 
 export default function App() {
   if (!isSupabaseConfigured) return <SetupRequired />
@@ -54,6 +60,12 @@ export default function App() {
             <Route path="assistente" element={<SalesCopilot />} />
             <Route path="receita" element={<RevenueIntelligence />} />
             <Route path="segmentos" element={<IntelligenceSegments />} />
+            <Route path="aprendizado" element={<RequireRole roles={['admin','gestor']}><CommercialLearning /></RequireRole>} />
+            <Route path="executivo" element={<ExecutiveOverview />} />
+            <Route path="modelos-proposta" element={<RequireRole roles={['admin','gestor']}><ProposalTemplates /></RequireRole>} />
+            <Route path="consumo" element={<RequireRole roles={['admin','gestor']}><OperationalCosts /></RequireRole>} />
+            <Route path="seguranca" element={<RequireRole roles={['admin','gestor']}><SecurityGovernance /></RequireRole>} />
+            <Route path="configuracao-comercial" element={<RequireRole roles={['admin','gestor']}><CommercialConfiguration /></RequireRole>} />
             <Route path="oportunidades" element={<Opportunities />} />
             <Route path="agenda" element={<Agenda />} />
             <Route path="campanhas" element={<Campaigns />} />

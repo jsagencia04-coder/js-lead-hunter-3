@@ -118,6 +118,17 @@ def test_auditoria_site_bom():
     assert "links_quebrados" in codes and "sem_https" not in codes and "nao_responsivo" not in codes
 
 
+def test_recursos_comerciais_observados_sem_ausencia_inventada():
+    body = GOOD.replace('</body>', '<a href="/catalogo">Catálogo</a><a href="/agendamento">Agenda</a><footer>Hospedado na Hostgator e GoDaddy</footer></body>')
+    f = _site_fetcher({('padariasaojoao.com.br', '/'): (200, body)})
+    result = au.audit_site(f, 'https://padariasaojoao.com.br/', check_links=0)
+    assert result['checks']['recursos_comerciais']['catalogo']['observado']
+    assert result['checks']['recursos_comerciais']['agendamento']['observado']
+    assert not result['checks']['recursos_comerciais']['loja']['observado']
+    assert not result['checks']['estacionado']
+    assert 'página' in result['checks']['recursos_comerciais']['loja']['escopo']
+
+
 def test_auditoria_site_com_problemas():
     f = _site_fetcher({("semhttps.com.br", "/"): (200, BAD)})
     a = au.audit_site(f, "https://semhttps.com.br/")

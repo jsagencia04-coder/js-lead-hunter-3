@@ -1,0 +1,27 @@
+import {useCallback,useEffect,useState,type FormEvent} from 'react'
+import {supabase} from '@/lib/supabase'
+import {useAuth} from '@/hooks/useAuth'
+import {PageHeader} from '@/components/layout/AppLayout'
+import {Input} from '@/components/ui/input'
+import {Button} from '@/components/ui/button'
+import {Alert} from '@/components/ui/alert'
+import {Card,CardContent,CardHeader,CardTitle} from '@/components/ui/card'
+interface Stage {code:string;label:string;probability:number}
+export default function CommercialConfiguration(){
+ const {hasRole}=useAuth();const [stages,setStages]=useState<Stage[]>([]),[people,setPeople]=useState<{id:string;full_name:string|null;email:string}[]>([])
+ const [pipelines,setPipelines]=useState<{id:string;name:string;active:boolean}[]>([]),[members,setMembers]=useState<{pipeline_id:string;stage_code:string}[]>([]),[teams,setTeams]=useState<{id:string;name:string;active:boolean}[]>([]),[teamMembers,setTeamMembers]=useState<{team_id:string;user_id:string}[]>([])
+ const [name,setName]=useState(''),[chosen,setChosen]=useState<string[]>([]),[pipelineId,setPipelineId]=useState<string|null>(null)
+ const [teamName,setTeamName]=useState(''),[users,setUsers]=useState<string[]>([]),[teamId,setTeamId]=useState<string|null>(null)
+ const [error,setError]=useState<string|null>(null),[busy,setBusy]=useState(false)
+ const load=useCallback(async()=>{setBusy(true);setError(null);try{
+ const [s,p,m,t,u,tm]=await Promise.all([supabase.from('pipeline_stages').select('code,label,probability').eq('active',true).order('sort_order'),supabase.from('sales_pipelines').select('*').order('name'),supabase.from('pipeline_stage_members').select('*'),supabase.from('sales_teams').select('*').order('name'),supabase.from('profiles').select('id,full_name,email').eq('active',true),supabase.from('sales_team_members').select('*')]);const err=[s,p,m,t,u,tm].find(x=>x.error)?.error;if(err)throw new Error(err.message)
+ setStages(s.data??[]);setPipelines(p.data??[]);setMembers(m.data??[]);setTeams(t.data??[]);setPeople(u.data??[]);setTeamMembers(tm.data??[])
+ }catch(e){setError(e instanceof Error?e.message:String(e))}finally{setBusy(false)}},[])
+ useEffect(()=>{load()},[load])
+ async function pipeline(e:FormEvent){e.preventDefault();setBusy(true);const r=await supabase.rpc('configure_sales_pipeline',{p_name:name,p_stages:stages.filter(s=>chosen.includes(s.code)).map(s=>s.code),p_id:pipelineId,p_active:true});if(r.error){setError(r.error.message);setBusy(false)}else{setName('');setChosen([]);setPipelineId(null);load()}}
+ async function team(e:FormEvent){e.preventDefault();setBusy(true);const r=await supabase.rpc('configure_sales_team',{p_name:teamName,p_users:users,p_id:teamId,p_active:true});if(r.error){setError(r.error.message);setBusy(false)}else{setTeamName('');setUsers([]);setTeamId(null);load()}}
+ return <><PageHeader title="Configuração comercial" description="Funis reutilizam etapas existentes e preservam oportunidades/histórico. Equipes não concedem privilégios adicionais."/>{error&&<Alert tone="error" className="mb-4">{error}</Alert>}
+ <div className="grid gap-4 lg:grid-cols-2"><Card><CardHeader><CardTitle>Funis</CardTitle></CardHeader><CardContent className="space-y-3">{pipelines.map(p=><div key={p.id} className="rounded border p-2 text-sm"><strong>{p.name}</strong><p className="text-xs text-muted-foreground">{members.filter(m=>m.pipeline_id===p.id).map(m=>stages.find(s=>s.code===m.stage_code)?.label??m.stage_code).join(' → ')}</p>{hasRole('admin')&&<Button size="sm" variant="outline" onClick={()=>{setPipelineId(p.id);setName(p.name);setChosen(members.filter(m=>m.pipeline_id===p.id).map(m=>m.stage_code))}}>Editar</Button>}</div>)}{hasRole('admin')&&<form onSubmit={pipeline} className="space-y-2 border-t pt-3"><Input required aria-label="Nome do funil" value={name} onChange={e=>setName(e.target.value)} placeholder="Nome do funil"/><div className="grid gap-2 sm:grid-cols-2">{stages.map(s=><label className="text-xs flex gap-2" key={s.code}><input type="checkbox" checked={chosen.includes(s.code)} onChange={e=>setChosen(a=>e.target.checked?[...a,s.code]:a.filter(x=>x!==s.code))}/>{s.label} · {s.probability}%</label>)}</div><Button disabled={busy||chosen.length<2} type="submit">Salvar funil</Button></form>}</CardContent></Card>
+ <Card><CardHeader><CardTitle>Equipes</CardTitle></CardHeader><CardContent className="space-y-3">{teams.map(t=><div key={t.id} className="rounded border p-2 text-sm"><strong>{t.name}</strong><p>{teamMembers.filter(m=>m.team_id===t.id).length} membros</p>{hasRole('admin','gestor')&&<Button size="sm" variant="outline" onClick={()=>{setTeamId(t.id);setTeamName(t.name);setUsers(teamMembers.filter(m=>m.team_id===t.id).map(m=>m.user_id))}}>Editar</Button>}</div>)}{hasRole('admin','gestor')&&<form onSubmit={team} className="space-y-2"><Input required aria-label="Nome da equipe" value={teamName} onChange={e=>setTeamName(e.target.value)} placeholder="Nome da equipe"/>{people.map(p=><label key={p.id} className="flex gap-2 text-xs"><input type="checkbox" checked={users.includes(p.id)} onChange={e=>setUsers(a=>e.target.checked?[...a,p.id]:a.filter(x=>x!==p.id))}/>{p.full_name??p.email}</label>)}<Button disabled={busy||!teamName.trim()} type="submit">Salvar equipe</Button></form>}</CardContent></Card></div>
+ <p className="mt-4 text-xs text-muted-foreground">Probabilidades são parâmetros comerciais, não chance estatística comprovada. O valor ponderado não é receita contratada. As etapas/pesos podem ser administrados na configuração existente.</p></>
+}

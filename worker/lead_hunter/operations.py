@@ -14,6 +14,7 @@ def run_operations(database_url: str, limit: int = 100) -> dict:
     # Cada função é transacional e tem lock/idempotência no banco.
     with psycopg.connect(database_url, autocommit=True, connect_timeout=15) as conn:
         conn.execute("set statement_timeout = '60s'")
+        recurring = conn.execute('select public.schedule_recurring_tasks(%s)', (limit,)).fetchone()[0]
         watched = conn.execute('select public.schedule_company_watches(%s)', (limit,)).fetchone()[0]
         result = conn.execute('select public.run_sales_automations(%s)', (limit,)).fetchone()[0]
         agents = []
@@ -22,7 +23,7 @@ def run_operations(database_url: str, limit: int = 100) -> dict:
             if job['status'] == 'vazio':
                 break
             agents.append(job)
-    return {**result, 'watches_scheduled': watched, 'agent_jobs_processed': len(agents),
+    return {**result, 'recurring_created': recurring, 'watches_scheduled': watched, 'agent_jobs_processed': len(agents),
             'agent_errors': sum(j['status'] == 'erro' for j in agents)}
 
 
